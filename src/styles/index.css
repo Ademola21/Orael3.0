@@ -1,0 +1,330 @@
+@import './base.css';
+@import './layout.css';
+@import './components.css';
+@import './miner.css';
+@import './play.css';
+@import './earn.css';
+@import './wallet.css';
+@import './overlays.css';
+@import './animations.css';
+
+/* =========================================================================
+   TELEGRAM-ONLY GATE — Premium animated landing page
+   Shown when user opens app in a regular browser instead of Telegram.
+   Deep sapphire background with animated gold particles, floating bot icon,
+   and a strong call-to-action. No neon, just elegant HD motion.
+   ========================================================================= */
+.tg-gate {
+  display: none;
+  position: fixed; inset: 0; z-index: 100;
+  background:
+    radial-gradient(120% 80% at 50% 10%, rgba(59, 130, 246, 0.12), transparent 55%),
+    radial-gradient(90% 60% at 85% 90%, rgba(251, 191, 36, 0.08), transparent 50%),
+    radial-gradient(80% 60% at 15% 70%, rgba(139, 92, 246, 0.06), transparent 50%),
+    var(--bg-0);
+  flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 40px 24px; gap: 0;
+  overflow: hidden;
+}
+.tg-gate.show, .tg-gate[style*="display: flex"] { display: flex; animation: gateFadeIn 0.6s var(--ease-out); }
+@keyframes gateFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Animated particle field */
+.tg-gate::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(251, 191, 36, 0.3) 1px, transparent 1px),
+    radial-gradient(circle at 70% 60%, rgba(59, 130, 246, 0.2) 1px, transparent 1px),
+    radial-gradient(circle at 40% 80%, rgba(139, 92, 246, 0.2) 1px, transparent 1px),
+    radial-gradient(circle at 85% 20%, rgba(251, 191, 36, 0.2) 1px, transparent 1px),
+    radial-gradient(circle at 10% 90%, rgba(16, 185, 129, 0.2) 1px, transparent 1px);
+  background-size: 200px 200px, 250px 250px, 300px 300px, 220px 220px, 280px 280px;
+  animation: particleDrift 30s linear infinite;
+  opacity: 0.6;
+}
+@keyframes particleDrift {
+  from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; }
+  to   { background-position: 200px 200px, -250px 250px, 300px -300px, -220px -220px, 280px 280px; }
+}
+
+/* Subtle dot grid underneath */
+.tg-gate::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.025) 1px, transparent 0);
+  background-size: 28px 28px;
+}
+
+.tg-gate .gate-inner {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center;
+  max-width: 380px; width: 100%;
+  animation: gateContentRise 0.8s 0.2s var(--ease-spring) backwards;
+}
+@keyframes gateContentRise {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Bot logo with rotating ring + pulse */
+.tg-gate .tg-logo-wrap {
+  position: relative; width: 130px; height: 130px;
+  margin-bottom: 28px;
+  display: grid; place-items: center;
+}
+.tg-gate .tg-logo-ring {
+  position: absolute; inset: 0;
+  border: 2px solid transparent;
+  border-top-color: var(--gold-1);
+  border-right-color: rgba(251, 191, 36, 0.4);
+  border-radius: 50%;
+  animation: ringSpin 4s linear infinite;
+}
+.tg-gate .tg-logo-ring-2 {
+  position: absolute; inset: -14px;
+  border: 1px dashed rgba(251, 191, 36, 0.3);
+  border-radius: 50%;
+  animation: ringSpinReverse 16s linear infinite;
+}
+@keyframes ringSpin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes ringSpinReverse { from { transform: rotate(360deg); } to { transform: rotate(0); } }
+
+.tg-gate .tg-logo-bg {
+  position: absolute; inset: 12px;
+  background: radial-gradient(circle, var(--gold-glow) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+@keyframes pulseGlow {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+.tg-gate .tg-logo {
+  position: relative; z-index: 2;
+  width: 60px; height: 60px;
+  color: var(--gold-1);
+  animation: logoFloat 4s ease-in-out infinite;
+}
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.tg-gate h2 {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 28px; color: var(--ink);
+  margin-bottom: 12px; letter-spacing: -0.01em;
+  background: linear-gradient(135deg, var(--ink) 0%, var(--gold-1) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.tg-gate p {
+  font-size: 14.5px; color: var(--ink-mute); line-height: 1.6;
+  max-width: 320px; margin-bottom: 28px;
+}
+
+/* Feature pills on the gate */
+.tg-gate .gate-features {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+  margin-bottom: 32px;
+}
+.tg-gate .gate-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: 100px;
+  background: var(--grad-card); border: 1px solid var(--line-strong);
+  font-size: 12px; color: var(--ink-soft); font-weight: 600;
+  font-family: var(--font-display);
+  animation: pillFadeIn 0.6s var(--ease-out) backwards;
+}
+.tg-gate .gate-pill:nth-child(1) { animation-delay: 0.5s; }
+.tg-gate .gate-pill:nth-child(2) { animation-delay: 0.6s; }
+.tg-gate .gate-pill:nth-child(3) { animation-delay: 0.7s; }
+.tg-gate .gate-pill:nth-child(4) { animation-delay: 0.8s; }
+.tg-gate .gate-pill svg { width: 13px; height: 13px; color: var(--gold-1); }
+@keyframes pillFadeIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Big animated CTA button */
+.tg-gate .gate-btn {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 10px; padding: 16px 32px; border-radius: 100px;
+  background: linear-gradient(135deg, var(--gold-1), var(--gold-2));
+  color: #1a0f06; font-weight: 700;
+  font-size: 15px; text-decoration: none;
+  font-family: var(--font-display); letter-spacing: 0.01em;
+  box-shadow: var(--shadow-gold), inset 0 1px 0 rgba(255, 245, 200, 0.4);
+  transition: all 0.25s var(--ease-spring);
+  overflow: hidden;
+  animation: btnPulse 2.5s ease-in-out infinite;
+}
+@keyframes btnPulse {
+  0%, 100% { box-shadow: var(--shadow-gold), inset 0 1px 0 rgba(255, 245, 200, 0.4), 0 0 0 0 rgba(251, 191, 36, 0.4); }
+  50%      { box-shadow: var(--shadow-gold), inset 0 1px 0 rgba(255, 245, 200, 0.4), 0 0 0 12px rgba(251, 191, 36, 0); }
+}
+.tg-gate .gate-btn::before {
+  content: ""; position: absolute; top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: shimmer 3s infinite;
+}
+@keyframes shimmer {
+  0% { left: -100%; }
+  50%, 100% { left: 100%; }
+}
+.tg-gate .gate-btn:hover {
+  transform: translateY(-3px) scale(1.03);
+  filter: brightness(1.08);
+}
+.tg-gate .gate-btn:active { transform: translateY(-1px) scale(0.99); }
+.tg-gate .gate-btn svg { width: 18px; height: 18px; }
+
+/* Footer hint */
+.tg-gate .gate-footer {
+  margin-top: 28px;
+  font-size: 11px; color: var(--ink-faint);
+  letter-spacing: 0.04em;
+}
+
+/* Banned gate uses the same shell but red */
+.tg-gate.ban-gate h2 {
+  background: linear-gradient(135deg, var(--ruby), #b91c1c);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.tg-gate.ban-gate .tg-logo { color: var(--ruby); }
+.tg-gate.ban-gate .tg-logo-ring { border-top-color: var(--ruby); border-right-color: rgba(239, 68, 68, 0.4); }
+.tg-gate.ban-gate .tg-logo-bg { background: radial-gradient(circle, rgba(239, 68, 68, 0.15) 0%, transparent 70%); }
+.tg-gate.ban-gate .gate-btn { display: none; }
+
+/* =========================================================================
+   PREMIUM NOTIFICATION SYSTEM — multi-variant toasts with HD animations
+   Variants: success (emerald), error (ruby), info (sapphire), reward (gold)
+   ========================================================================= */
+.toast-wrap {
+  position: fixed; left: 0; right: 0;
+  bottom: calc(var(--nav-h) + var(--safe-bot) + 16px);
+  z-index: 90;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  pointer-events: none;
+  padding: 0 16px;
+}
+.toast {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 18px 13px 14px;
+  border-radius: 14px;
+  background: var(--grad-elevated);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 var(--edge-hi);
+  font-size: 13.5px; font-weight: 600; color: var(--ink);
+  max-width: 380px; min-width: 200px;
+  animation: toastSlideIn 0.5s var(--ease-spring);
+  position: relative; overflow: hidden;
+  pointer-events: auto;
+}
+.toast.toast-leaving { animation: toastSlideOut 0.35s var(--ease) forwards; }
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateY(28px) scale(0.92); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toastSlideOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(20px) scale(0.9); }
+}
+
+/* Progress bar at bottom of toast (auto-dismiss countdown) */
+.toast::after {
+  content: ""; position: absolute; bottom: 0; left: 0;
+  height: 2px; width: 100%;
+  background: var(--gold-1);
+  transform-origin: left;
+  animation: toastProgress 2.6s linear forwards;
+  opacity: 0.7;
+}
+@keyframes toastProgress { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* Toast icon */
+.toast-ic {
+  width: 32px; height: 32px; border-radius: 10px;
+  display: grid; place-items: center; flex-shrink: 0;
+  animation: iconPop 0.5s var(--ease-spring);
+}
+@keyframes iconPop {
+  0%   { transform: scale(0) rotate(-180deg); }
+  60%  { transform: scale(1.2) rotate(10deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.toast-ic svg { width: 18px; height: 18px; }
+
+/* Variant: success */
+.toast.success .toast-ic { background: rgba(16, 185, 129, 0.15); color: var(--emerald); }
+.toast.success::after { background: var(--emerald); }
+
+/* Variant: error */
+.toast.error .toast-ic { background: rgba(239, 68, 68, 0.15); color: var(--ruby); }
+.toast.error::after { background: var(--ruby); }
+
+/* Variant: info */
+.toast.info .toast-ic { background: rgba(59, 130, 246, 0.15); color: var(--sapphire); }
+.toast.info::after { background: var(--sapphire); }
+
+/* Variant: reward (gold, for in-app rewards) */
+.toast.reward .toast-ic { background: var(--gold-glow); color: var(--gold-1); }
+.toast.reward::after { background: var(--gold-1); }
+.toast.reward { border-color: rgba(251, 191, 36, 0.3); }
+
+/* Toast body */
+.toast-body { flex: 1; min-width: 0; }
+.toast-title { font-weight: 700; font-size: 13.5px; color: var(--ink); }
+.toast-msg { font-size: 11.5px; color: var(--ink-mute); margin-top: 2px; font-weight: 500; }
+.toast-coin {
+  font-family: var(--font-mono); font-size: 14px; color: var(--gold-1);
+  font-weight: 700; flex-shrink: 0;
+}
+
+/* =========================================================================
+   FLOATING REWARD BURST — when user earns ORL, coins fly up briefly
+   ========================================================================= */
+.reward-burst {
+  position: fixed; left: 50%; top: 40%;
+  transform: translate(-50%, -50%);
+  z-index: 95; pointer-events: none;
+  font-family: var(--font-display); font-weight: 700; font-size: 38px;
+  background: linear-gradient(135deg, var(--gold-1), var(--gold-2));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rewardFly 1.4s var(--ease-out) forwards;
+  text-shadow: 0 4px 24px rgba(251, 191, 36, 0.3);
+}
+@keyframes rewardFly {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  20%  { opacity: 1; transform: translate(-50%, -60%) scale(1.2); }
+  80%  { opacity: 1; transform: translate(-50%, -90%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -120%) scale(0.9); }
+}
+
+/* =========================================================================
+   LOADING SPINNER — premium sapphire/gold
+   ========================================================================= */
+.spinner {
+  width: 24px; height: 24px;
+  border: 2.5px solid var(--bg-inset);
+  border-top-color: var(--gold-1);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Skeleton loading shimmer for cards */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

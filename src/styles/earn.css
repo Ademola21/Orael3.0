@@ -1,0 +1,87 @@
+/* streak strip */
+.streak { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; margin-bottom: 16px; }
+.day {
+  aspect-ratio: 1; border-radius: 12px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+  background: var(--grad-card); border: 1px solid var(--line);
+  font-size: 10px; color: var(--ink-faint);
+  transition: all 0.2s var(--ease);
+}
+.day .d-amt { font-family: var(--font-display); font-weight: 700; font-size: 12px; color: var(--ink-soft); }
+.day.claimed {
+  background: linear-gradient(155deg, rgba(16, 185, 129, 0.15), var(--bg-2));
+  border-color: rgba(16, 185, 129, 0.3);
+}
+.day.claimed .d-amt { color: var(--emerald); }
+.day.today {
+  border-color: var(--gold-2);
+  box-shadow: 0 0 0 1px var(--gold-2), var(--shadow-gold);
+}
+.day.today .d-amt { color: var(--gold-1); }
+
+.referral {
+  display: flex; gap: 10px; align-items: center; padding: 14px 15px; margin-bottom: 16px;
+  background: var(--bg-inset); border: 1px dashed var(--line-strong); border-radius: var(--r-md);
+}
+.referral code { flex: 1; font-family: var(--font-mono); font-size: 12px; color: var(--gold-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.referral button {
+  padding: 8px 16px; border-radius: 10px; border: none;
+  background: linear-gradient(180deg, var(--gold-1), var(--gold-2));
+  color: #1a0f06; font-weight: 700; font-size: 13px; font-family: var(--font-display);
+  cursor: pointer; transition: transform 0.15s var(--ease-spring);
+}
+.referral button:active { transform: scale(0.95); }
+
+/* =========================================================================
+   REFERRAL stats (Earn)
+   ========================================================================= */
+.ref-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+.ref-stat {
+  background: var(--grad-card); border: 1px solid var(--line);
+  border-radius: var(--r-md); padding: 14px 10px; text-align: center;
+  box-shadow: var(--shadow-sm), inset 0 1px 0 var(--edge-hi);
+}
+.ref-stat .rv { font-family: var(--font-display); font-weight: 700; font-size: 20px; color: var(--ink); }
+.ref-stat .rv.cu { color: var(--gold-1); }
+.ref-stat .rl { font-size: 10px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 3px; }
+.tier-line { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-soft); padding: 9px 0; }
+.tier-badge {
+  width: 32px; height: 32px; border-radius: 9px;
+  background: var(--gold-glow); color: var(--gold-1);
+  display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 700; font-size: 12px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+.tier-line b { color: var(--gold-1); }
+
+/* =========================================================================
+   DAILY AD CHALLENGE (Earn)
+   ========================================================================= */
+.ad-challenge .ac-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.ad-challenge .ac-title { font-size: 13px; color: var(--ink-soft); font-weight: 500; }
+.ad-challenge .ac-count { font-family: var(--font-mono); font-size: 13px; color: var(--ink-mute); }
+.ad-challenge .ac-count b { color: var(--gold-1); font-size: 20px; font-family: var(--font-display); }
+.ac-milestones { display: flex; flex-direction: column; gap: 8px; }
+.ac-milestone {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-radius: var(--r-sm);
+  background: var(--bg-inset); border: 1px solid var(--line);
+  transition: all 0.3s var(--ease);
+}
+.ac-milestone.claimed {
+  background: linear-gradient(155deg, rgba(16, 185, 129, 0.1), var(--bg-inset));
+  border-color: rgba(16, 185, 129, 0.3);
+}
+.ac-milestone .ac-m-ads { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--ink); }
+.ac-milestone.claimed .ac-m-ads { color: var(--emerald); }
+.ac-milestone .ac-m-bonus { font-family: var(--font-mono); font-size: 13px; color: var(--gold-1); font-weight: 700; }
+.ac-milestone.claimed .ac-m-bonus { color: var(--emerald); }
+.ac-milestone .ac-m-status { font-size: 11px; color: var(--ink-faint); }
+.ac-milestone.claimed .ac-m-status { color: var(--emerald); font-weight: 600; }
+
+/* =========================================================================
+   VIDEO WALL (Earn)
+   ========================================================================= */
+.video-wall .vw-info { margin-bottom: 12px; }
+.video-wall .vw-title { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--ink); }
+.video-wall .vw-reward { font-family: var(--font-mono); font-size: 14px; color: var(--gold-1); font-weight: 700; margin-top: 4px; }

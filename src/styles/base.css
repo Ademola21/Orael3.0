@@ -1,0 +1,107 @@
+/* =========================================================================
+   ORAEL — Premium Design System v2
+   "Sapphire & Gold" — deep sapphire background with warm gold accents.
+   No neon, no glow. Raw, professional, HD-quality fintech feel.
+   ========================================================================= */
+
+:root {
+  /* --- Base surfaces (deep sapphire gradient) --- */
+  --bg-0: #0a0e1a;          /* deepest base */
+  --bg-1: #0f141f;          /* page surface */
+  --bg-2: #161c2c;          /* card */
+  --bg-3: #1e2538;          /* card hover / inset top */
+  --bg-inset: #0c1018;      /* recessed wells */
+
+  /* --- Surface gradients for HD depth --- */
+  --grad-card: linear-gradient(155deg, #1a2138 0%, #141a2a 100%);
+  --grad-card-hover: linear-gradient(155deg, #1f2740 0%, #181f33 100%);
+  --grad-elevated: linear-gradient(180deg, #232b45 0%, #1a2138 100%);
+
+  /* --- Hairlines & edges --- */
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.12);
+  --edge-hi: rgba(255, 255, 255, 0.06);
+  --edge-lo: rgba(0, 0, 0, 0.5);
+
+  /* --- Text --- */
+  --ink: #f8fafc;           /* primary, near-white */
+  --ink-soft: #cbd5e1;      /* secondary */
+  --ink-mute: #94a3b8;      /* tertiary */
+  --ink-faint: #64748b;     /* labels */
+
+  /* --- Accent: warm gold (the only "warm" hue) --- */
+  --gold-1: #fbbf24;        /* gold light */
+  --gold-2: #f59e0b;        /* gold */
+  --gold-3: #d97706;        /* gold deep */
+  --gold-glow: rgba(251, 191, 36, 0.15);
+
+  /* --- Functional colors (muted, professional) --- */
+  --emerald: #10b981;       /* gains, success */
+  --emerald-deep: #059669;
+  --ruby: #ef4444;          /* losses, errors */
+  --ruby-deep: #dc2626;
+  --sapphire: #3b82f6;      /* info, links */
+  --sapphire-deep: #2563eb;
+  --violet: #8b5cf6;        /* pro, premium */
+
+  /* --- Type --- */
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, "SF Mono", monospace;
+
+  /* --- Geometry --- */
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 28px;
+
+  /* --- Motion --- */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* --- Safe areas --- */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+  --nav-h: 78px;
+
+  /* --- Shadows --- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+  --shadow-gold: 0 4px 16px rgba(251, 191, 36, 0.2);
+}
+
+/* ----------------------------------------------------------------------- */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-0);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  letter-spacing: -0.01em;
+}
+
+/* Background: layered sapphire gradient + subtle grid pattern */
+.field {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(59, 130, 246, 0.08), transparent 55%),
+    radial-gradient(90% 60% at 85% 8%, rgba(251, 191, 36, 0.04), transparent 50%),
+    radial-gradient(80% 60% at 15% 90%, rgba(139, 92, 246, 0.04), transparent 50%),
+    var(--bg-0);
+}
+
+/* Subtle dot grid for HD premium texture */
+.field::after {
+  content: ""; position: absolute; inset: 0; opacity: 0.4;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.03) 1px, transparent 0);
+  background-size: 32px 32px;
+}

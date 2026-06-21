@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#0b0a09" />
+<title>Orael</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+</head>
+<body>
+<div class="field"></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbbf24" /><stop offset="1" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="cuGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbbf24" /><stop offset="1" stop-color="#d97706" />
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="app">
+
+  <!-- ===================== TOP BAR ===================== -->
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <circle cx="20" cy="20" r="18" stroke="url(#goldGrad)" stroke-width="2.4"/>
+        <path d="M20 6 L20 20 L30 26" stroke="#fbbf24" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="20" cy="20" r="3.6" fill="#fbbf24"/>
+      </svg>
+      <div class="brand-name">OR<b>AEL</b></div>
+    </div>
+    <div class="topbar-right">
+      <span class="pro-chip"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 7l5 4 4-7 4 7 5-4-2 12H5L3 7z"/></svg>PRO</span>
+      <a class="admin-chip" id="adminChip" href="#" aria-label="Open admin control panel">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        ADMIN
+      </a>
+      <div class="user-chip" id="userChip" style="cursor: pointer;">
+        <div class="av" id="userAv">A</div>
+        <div class="lvl">Tier <b id="userTier">...</b></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="scroll">
+
+    <!-- ============ SCREEN: MINER ============ -->
+    <section class="screen active" id="screen-mine">
+      <div class="card balance-card">
+        <div class="balance-top">
+          <div>
+            <div class="balance-label">Your balance</div>
+            <div class="balance-val"><span id="balance">...</span><span class="unit">ORL</span></div>
+            <div class="balance-fiat">≈ <b id="balanceFiat">₦...</b></div>
+          </div>
+        </div>
+        <div class="ticker">
+          <span class="t-label">This session</span>
+          <span class="t-val" id="sessionEarned">...</span>
+        </div>
+      </div>
+
+      <!-- Hourly faucet -->
+      <div class="card faucet">
+        <svg class="drop" viewBox="0 0 24 24" fill="none"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" stroke="#e0a25b" stroke-width="1.7" stroke-linejoin="round"/><path d="M9.5 14a2.5 2.5 0 0 0 2.5 2.5" stroke="#e0a25b" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div class="faucet-body">
+          <div class="ft">Hourly bonus</div>
+          <div class="fs" id="faucetStatus">Ready to claim</div>
+        </div>
+        <button class="faucet-btn" id="faucetBtn">Claim</button>
+      </div>
+
+      <!-- Engine gauge -->
+      <div class="engine">
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" viewBox="0 0 200 200">
+            <circle class="gauge-arc-bg" cx="100" cy="100" r="84" stroke-dasharray="395.8 527.8" />
+            <circle class="gauge-arc-fg" id="gaugeArc" cx="100" cy="100" r="84" stroke-dasharray="395.8 527.8" stroke-dashoffset="0" />
+          </svg>
+          <div class="gauge-center">
+            <div class="gauge-energy"><span id="energyNum">...</span><span class="pct">%</span></div>
+            <div class="gauge-cap">Engine fuel</div>
+            <div class="gauge-status" id="engineStatus">Mining active</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="s-val" id="timeLeft">...</div><div class="s-lab">Fuel left</div></div>
+        <div class="stat"><div class="s-val cu" id="hashrate">...</div><div class="s-lab">ORL / hr</div></div>
+        <div class="stat"><div class="s-val" id="boostState">...</div><div class="s-lab">Multiplier</div></div>
+      </div>
+
+      <button class="btn btn-primary" id="refuelBtn">
+        <svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" stroke="#1c1109" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <span class="btn-stack">REFUEL ENGINE<small>Watch a short ad · +100% fuel</small></span>
+      </button>
+      <div style="height:11px"></div>
+      <button class="btn btn-ghost" id="boostBtn">
+        <svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M12 3v6m0 0 3-3m-3 3L9 6M5 13l-2 8 9-5 9 5-2-8" stroke="#e0a25b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="btn-stack">Activate 1.2× Boost<small>Watch an ad · 1.2× speed for 3 hrs</small></span>
+      </button>
+
+      <!-- Mining rig upgrade -->
+      <div style="height:18px"></div>
+      <div class="feat">
+        <div class="feat-head">
+          <div class="feat-title"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="9" width="18" height="11" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M7 9V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3M8 13h.01M12 13h.01M16 13h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Mining rig</div>
+          <span class="tag cu" id="rigName">...</span>
+        </div>
+        <div class="rig-meter" id="rigMeter"></div>
+        <div class="rig-row">
+          <div class="rig-now">Base rate <b id="rigRate">...</b> ORL/hr · next <b id="rigNext">...</b></div>
+          <button class="faucet-btn" id="rigBtn">Upgrade</button>
+        </div>
+      </div>
+
+      <p class="hint">Fuel drains as the engine mines. Refuel with one ad to keep ORL flowing. Upgrade your rig to mine faster.</p>
+    </section>
+
+    <!-- ============ SCREEN: PLAY ============ -->
+    <section class="screen" id="screen-play">
+
+      <!-- Lucky spin -->
+      <div class="feat">
+        <div class="feat-head">
+          <div class="feat-title"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 12 7 7m5 5 5-5m-5 5v7" stroke="currentColor" stroke-width="1.5"/></svg>Lucky spin</div>
+          <span class="tag free" id="spinTag">Free with ad</span>
+        </div>
+        <div class="wheel-wrap">
+          <div class="wheel-stage">
+            <div class="wheel-bezel"></div>
+            <div class="wheel-pointer">
+              <svg viewBox="0 0 22 30" fill="none">
+                <path d="M11 30 L2 8 A9 9 0 0 1 20 8 Z" fill="url(#goldGrad)" stroke="#7c2d12" stroke-width="1"/>
+                <circle cx="11" cy="9" r="3" fill="#7c2d12"/>
+              </svg>
+            </div>
+            <svg class="wheel" id="wheel" viewBox="0 0 200 200"></svg>
+            <div class="wheel-hub">SPIN</div>
+          </div>
+          <button class="btn btn-primary" id="spinBtn">Spin the wheel</button>
+        </div>
+        <p class="hint" style="margin-bottom:0">Watch a short ad to spin the wheel and win prizes.</p>
+      </div>
+
+      <!-- Scratch card -->
+      <div class="feat">
+        <div class="feat-head">
+          <div class="feat-title"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M7 14c2-3 4-3 6 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Scratch &amp; win</div>
+          <span class="tag cu" id="scratchTag">Unlimited</span>
+        </div>
+        <div class="scratch" id="scratch">
+          <div class="scratch-prize" id="scratchPrize">+0<small>ORL</small></div>
+          <canvas class="scratch-canvas" id="scratchCanvas"></canvas>
+        </div>
+        <button class="btn btn-ghost" id="scratchBtn">Get a scratch card</button>
+      </div>
+
+      <!-- Coin Flip -->
+      <div class="feat">
+        <div class="feat-head">
+          <div class="feat-title"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v10M9 10l3-3 3 3M9 14l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Coin flip</div>
+          <span class="tag free">Unlimited · 1 ad</span>
+        </div>
+        <div class="coinflip-stage">
+          <div class="cf-scene">
+            <div class="cf-coin" id="coinflipCoin">
+              <div class="cf-face cf-front">
+                <div class="cf-glyph">
+                  <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 L20 7 L20 17 L12 22 L4 17 L4 7 Z" stroke="#7c2d12" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.4" fill="#7c2d12"/></svg>
+                  <small>HEADS</small>
+                </div>
+                <div class="cf-rim"></div>
+              </div>
+              <div class="cf-face cf-back">
+                <div class="cf-glyph">
+                  <span style="font-size:26px;">★</span>
+                  <small>TAILS</small>
+                </div>
+                <div class="cf-rim"></div>
+              </div>
+            </div>
+          </div>
+          <div class="coinflip-result" id="coinflipResult">Pick heads or tails · win 65 ORL</div>
+        </div>
+        <div class="coinflip-buttons">
+          <button class="btn btn-ghost cf-btn" id="cfHeadsBtn">Heads</button>
+          <button class="btn btn-ghost cf-btn" id="cfTailsBtn">Tails</button>
+        </div>
+        <p class="hint" style="margin-bottom:0">Win: 65 ORL · Lose: 15 ORL consolation. Watch an ad per flip.</p>
+      </div>
+
+      <!-- Mystery chest -->
+      <div class="feat chest">
+        <div class="feat-head"><div class="feat-title"><svg viewBox="0 0 24 24" fill="none"><path d="M4 9h16v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9z" stroke="currentColor" stroke-width="1.7"/><path d="M4 9l2-4h12l2 4M12 9v11M9 9V7h6v2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>Mystery chest</div></div>
+        <svg class="chest-ico" viewBox="0 0 24 24" fill="none"><path d="M4 9h16v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9z" stroke="currentColor" stroke-width="1.5"/><path d="M4 9l2-4h12l2 4M12 9v11" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="14" r="1.4" fill="currentColor"/></svg>
+        <div class="chest-bar"><i id="chestBar" style="width:0%"></i></div>
+        <div class="chest-cap" id="chestCap">0 / 5 ads watched</div>
+        <button class="btn btn-primary" id="chestBtn">Watch ad to fill chest</button>
+      </div>
+
+      <!-- Daily lottery -->
+      <div class="feat">
+        <div class="feat-head">
+          <div class="feat-title"><svg viewBox="0 0 24 24" fill="none"><path d="M4 8a2 2 0 0 0 0 8v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2a2 2 0 0 0 0-8V6a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v2z" stroke="currentColor" stroke-width="1.6"/><path d="M12 5v14" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 3"/></svg>Daily draw</div>
+          <span class="feat-meta" id="lottoTimer">closes 23:59</span>
+        </div>
+        <div class="lotto-pool">
+          <div class="lp-amt" id="lottoPool">182,400 ORL</div>
+          <div class="lp-lab">Tonight's prize pool</div>
+        </div>
+        <div class="lotto-info">
+          <span>Your tickets: <b id="lottoMine">0</b></span>
+          <span>Players: <b id="lottoPlayers">1,284</b></span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="lottoAdBtn">Free ticket<small>watch ad</small></button>
+          <button class="btn btn-primary" id="lottoBuyBtn">Buy ticket<small>500 ORL</small></button>
+        </div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div class="feat">
+        <div class="feat-head">
+          <div class="feat-title"><svg viewBox="0 0 24 24" fill="none"><path d="M8 21h8M12 17v4M6 4h12v4a6 6 0 0 1-12 0V4zM6 6H4v2a3 3 0 0 0 2 2.8M18 6h2v2a3 3 0 0 1-2 2.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Weekly leaders</div>
+          <span class="tag cu">Pool 1.2M ORL</span>
+        </div>
+        <div id="leaderboard"></div>
+        <p class="hint" style="margin-bottom:0">Top 20 miners split the weekly pool every Sunday.</p>
+      </div>
+    </section>
+
+    <!-- ============ SCREEN: EARN ============ -->
+    <section class="screen" id="screen-earn">
+      <div class="seg">
+        <button class="on" data-seg="tasks">Tasks</button>
+        <button data-seg="invite">Invite</button>
+      </div>
+
+      <!-- Tasks pane -->
+      <div class="data-pane" data-pane="tasks">
+        <!-- Daily Ad Challenge (NEW) -->
+        <div class="eyebrow">Daily Ad Challenge</div>
+        <div class="card ad-challenge" style="padding:16px;margin:10px 0">
+          <div class="ac-header">
+            <div class="ac-title">Watch ads, earn milestone bonuses</div>
+            <div class="ac-count"><b id="acCount">0</b> ads today</div>
+          </div>
+          <div class="ac-milestones" id="acMilestones"></div>
+          <p class="hint" style="margin-bottom:0;font-size:11px">Bonuses credit automatically. All ad features count.</p>
+        </div>
+
+        <!-- Video Wall (NEW) -->
+        <div class="eyebrow">Video Ads Wall</div>
+        <div class="card video-wall" style="padding:16px;margin:10px 0">
+          <div class="vw-info">
+            <div class="vw-title">Watch &amp; earn · unlimited</div>
+            <div class="vw-reward">+30 ORL per video</div>
+          </div>
+          <button class="btn btn-primary" id="videoWallBtn">Watch video ad</button>
+          <p class="hint" style="margin-bottom:0;font-size:11px">No daily limit. Each video credits 30 ORL instantly.</p>
+        </div>
+
+        <div class="eyebrow">Adsgram Tasks</div>
+        <div class="card" style="padding:16px;margin:10px 0;background:var(--bg-card)">
+          <div id="adsgramTaskList"></div>
+        </div>
+        <div class="eyebrow">Daily streak</div>
+        <div class="streak" id="streakStrip"></div>
+        <div class="eyebrow">Watch &amp; earn</div>
+        <div class="list" id="taskList"></div>
+        <div class="eyebrow">Featured partners</div>
+        <div class="list" id="featuredList"></div>
+        <p class="hint" style="margin-bottom:0">Sponsored slots. Projects pay to appear here, so payouts cost Orael nothing.</p>
+      </div>
+
+      <!-- Invite pane -->
+      <div data-pane="invite" hidden>
+        <div class="eyebrow">Your referral earnings</div>
+        <div class="ref-stats">
+          <div class="ref-stat"><div class="rv" id="refCount">0</div><div class="rl">Invited</div></div>
+          <div class="ref-stat"><div class="rv cu" id="refEarned">0</div><div class="rl">ORL earned</div></div>
+          <div class="ref-stat"><div class="rv" id="refActive">0</div><div class="rl">Active</div></div>
+        </div>
+        <div class="feat" style="padding:14px 16px">
+          <div class="tier-line"><span class="tier-badge">L1</span>Direct invites pay you <b>10%</b> of all they mine</div>
+          <div class="tier-line"><span class="tier-badge">L2</span>Their invites pay you <b>3%</b> too</div>
+        </div>
+        <div class="referral">
+          <code id="refCode">https://t.me/Orael_bot?start=A4F92K</code>
+          <button id="copyRef">Copy</button>
+        </div>
+        <button class="btn btn-primary" id="shareRef">
+          <svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 3v13m0-13L8 7m4-4 4 4" stroke="#1c1109" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Share invite link
+        </button>
+        <p class="hint" style="margin-bottom:0">Forever commission, paid in ORL straight to your balance.</p>
+      </div>
+    </section>
+
+    <!-- ============ SCREEN: WALLET ============ -->
+    <section class="screen" id="screen-wallet">
+      <div class="card withdraw-head">
+        <div class="wl">Available to withdraw</div>
+        <div class="wv"><span id="wBalance">...</span> ORL</div>
+        <div class="wf">≈ <span id="wFiat">₦...</span></div>
+        <div class="progress"><i id="wProgress" style="width:0%"></i></div>
+        <div class="progress-cap"><span id="wProgLabel">...</span><span>Min. withdrawal</span></div>
+      </div>
+
+      <!-- Pro Miner moved to the Profile overlay (tap your avatar). -->
+
+
+
+      <div class="eyebrow">Payout method</div>
+      <div class="method-grid" id="methodGrid">
+        <div class="method" id="method-airtime" data-min="20000" data-name="Airtime" data-key="airtime">
+          <svg class="m-ic" viewBox="0 0 24 24" fill="none"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" stroke="#e0a25b" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          <div class="m-name">Airtime</div><div class="m-min">Min 20,000 ORL · ₦600</div>
+        </div>
+        <div class="method sel" id="method-bank" data-min="50000" data-name="Bank (NGN)" data-key="bank">
+          <svg class="m-ic" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="#e0a25b" stroke-width="1.8"/><path d="M3 10h18" stroke="#e0a25b" stroke-width="1.8"/></svg>
+          <div class="m-name">Bank (NGN)</div><div class="m-min">Min 50,000 ORL · ₦1,500</div>
+        </div>
+        <div class="method" id="method-usdt" data-min="100000" data-name="USDT" data-key="usdt">
+          <svg class="m-ic" viewBox="0 0 24 24" fill="none"><path d="M12 2v20M7 6h7a3 3 0 0 1 0 6H7m0 0h8a3 3 0 0 1 0 6H7" stroke="#e0a25b" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <div class="m-name">USDT (TRC20)</div><div class="m-min">Min 100,000 ORL · $2.00</div>
+        </div>
+      </div>
+
+      <div class="feat" id="walletInfoBox" style="padding:14px 16px;display:none">
+        <div class="fee-row"><span id="walletInfoLabel">Wallet address / Account details</span></div>
+        <input type="text" id="walletInfoInput" placeholder="Enter your wallet address or bank account" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg-inset);color:var(--ink);font-size:13px;margin-top:6px" />
+      </div>
+
+      <div class="feat" style="padding:14px 16px" id="feeBox">
+        <div class="fee-row"><span>Withdraw amount</span><b id="feeAmt">0 ORL</b></div>
+        <div class="fee-row"><span>Network fee (<span id="feePct">10</span>%)</span><b id="feeVal">0 ORL</b></div>
+        <div class="fee-row tot"><span>You receive</span><b id="feeNet">₦0.00</b></div>
+      </div>
+      <button class="btn btn-primary" id="withdrawBtn" disabled>Withdraw</button>
+      <p class="fee-note" id="feeNote">Pro members pay 5% instead of 10%. Withdrawals process within 24h.</p>
+
+      <div style="height:22px"></div>
+      <div class="eyebrow">Recent activity</div>
+      <div class="list" id="historyList"></div>
+    </section>
+
+  </main>
+
+  <!-- ===================== BOTTOM NAV ===================== -->
+  <nav class="nav">
+    <button class="nav-btn active" data-screen="mine">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 13l4-7 5 3 4-6 5 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13v5a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>Miner</span>
+    </button>
+    <button class="nav-btn" data-screen="play">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M10 9l5 3-5 3V9z" fill="currentColor"/></svg>
+      <span>Play</span>
+    </button>
+    <button class="nav-btn" data-screen="earn">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>Earn</span>
+    </button>
+    <button class="nav-btn" data-screen="wallet">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M16 12h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 9h13a2 2 0 0 1 2 2" stroke="currentColor" stroke-width="1.8"/></svg>
+      <span>Wallet</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ===================== AD OVERLAY ===================== -->
+<div class="ad-veil" id="adVeil">
+  <div class="ad-box">
+    <div class="ad-ring">
+      <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="#221f1c" stroke-width="8"/><circle id="adRing" cx="50" cy="50" r="44" fill="none" stroke="url(#cuGrad)" stroke-width="8" stroke-linecap="round" stroke-dasharray="276.5" stroke-dashoffset="276.5"/></svg>
+      <div class="ad-num" id="adNum">15</div>
+    </div>
+    <h3 id="adTitle">Refueling engine…</h3>
+    <p id="adBody">Your reward unlocks when the ad finishes.</p>
+    <div class="ad-tag">Sponsored · Adsgram</div>
+  </div>
+</div>
+
+<!-- ===================== TIER DETAILS MODAL ===================== -->
+<div class="modal-veil" id="tierVeil">
+  <div class="modal" style="max-width: 320px; text-align: left; padding: 24px;">
+    <h3 style="margin-top: 0; margin-bottom: 8px; font-family: var(--font-display); color: var(--cu-1); text-align: center;">Orael Tiers</h3>
+    <p style="font-size: 13px; color: var(--ink-mute); margin-bottom: 18px; line-height: 1.4; text-align: center;">
+      Your tier is calculated automatically based on your ORL balance or number of invites. Tiers grant passive mining rate multipliers.
+    </p>
+    
+    <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+      <!-- Tier 1 -->
+      <div class="tier-row" id="tier-row-1" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: var(--r-m); background: rgba(255,255,255,0.03); border: 1px solid transparent; transition: all 0.2s;">
+        <div>
+          <div style="font-weight: 600; font-size: 14px; color: var(--ink);">Tier 1: Bronze</div>
+          <div style="font-size: 11px; color: var(--ink-soft);">Requirement: None (Base)</div>
+        </div>
+        <div style="font-weight: 700; color: var(--cu-1); font-size: 13px;">1.0x rate</div>
+      </div>
+      
+      <!-- Tier 2 -->
+      <div class="tier-row" id="tier-row-2" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: var(--r-m); background: rgba(255,255,255,0.03); border: 1px solid transparent; transition: all 0.2s;">
+        <div>
+          <div style="font-weight: 600; font-size: 14px; color: var(--ink);">Tier 2: Silver</div>
+          <div style="font-size: 11px; color: var(--ink-soft);">5k ORL OR 3 Invites</div>
+        </div>
+        <div style="font-weight: 700; color: var(--cu-1); font-size: 13px;">1.1x rate</div>
+      </div>
+      
+      <!-- Tier 3 -->
+      <div class="tier-row" id="tier-row-3" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: var(--r-m); background: rgba(255,255,255,0.03); border: 1px solid transparent; transition: all 0.2s;">
+        <div>
+          <div style="font-weight: 600; font-size: 14px; color: var(--ink);">Tier 3: Gold</div>
+          <div style="font-size: 11px; color: var(--ink-soft);">25k ORL OR 10 Invites</div>
+        </div>
+        <div style="font-weight: 700; color: var(--cu-1); font-size: 13px;">1.25x rate</div>
+      </div>
+      
+      <!-- Tier 4 -->
+      <div class="tier-row" id="tier-row-4" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: var(--r-m); background: rgba(255,255,255,0.03); border: 1px solid transparent; transition: all 0.2s;">
+        <div>
+          <div style="font-weight: 600; font-size: 14px; color: var(--ink);">Tier 4: Platinum</div>
+          <div style="font-size: 11px; color: var(--ink-soft);">100k ORL OR 25 Invites</div>
+        </div>
+        <div style="font-weight: 700; color: var(--cu-1); font-size: 13px;">1.5x rate</div>
+      </div>
+      
+      <!-- Tier 5 -->
+      <div class="tier-row" id="tier-row-5" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: var(--r-m); background: rgba(255,255,255,0.03); border: 1px solid transparent; transition: all 0.2s;">
+        <div>
+          <div style="font-weight: 600; font-size: 14px; color: var(--ink);">Tier 5: Diamond</div>
+          <div style="font-size: 11px; color: var(--ink-soft);">500k ORL OR 100 Invites</div>
+        </div>
+        <div style="font-weight: 700; color: var(--cu-1); font-size: 13px;">2.0x rate</div>
+      </div>
+    </div>
+    
+    <!-- Progression Info -->
+    <div id="tierProgression" style="background: rgba(224,162,91,0.08); border: 1px dashed rgba(224,162,91,0.25); border-radius: var(--r-m); padding: 12px; font-size: 12px; margin-bottom: 20px; line-height: 1.45;">
+      <!-- Dynamic progress text goes here -->
+    </div>
+    
+    <button class="btn btn-primary" id="tierClose" style="width: 100%; margin-top: 4px;">Close</button>
+  </div>
+</div>
+
+<!-- ===================== REWARD MODAL ===================== -->
+<div class="modal-veil" id="modalVeil">
+  <div class="modal">
+    <svg class="m-burst" id="modalIcon" viewBox="0 0 24 24" fill="none"><path d="M12 2v4m0 12v4M2 12h4m12 0h4M5 5l3 3m8 8l3 3M19 5l-3 3M5 19l3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <h3 id="modalTitle">You won</h3>
+    <div class="m-amt" id="modalAmt">+0 ORL</div>
+    <p id="modalBody">Added to your balance.</p>
+    <button class="btn btn-primary" id="modalClose">Collect</button>
+  </div>
+</div>
+
+<!-- ===================== PROFILE OVERLAY ===================== -->
+<!-- Tap the topbar avatar to open. Houses avatar picker, Pro subscription,
+     and a link to the tier-progression modal. -->
+<div class="modal-veil" id="profileVeil">
+  <div class="modal profile-modal">
+    <button class="profile-close" id="profileClose" aria-label="Close">&times;</button>
+
+    <div class="profile-head">
+      <div class="profile-avatar" id="profileAvatar">A</div>
+      <div class="profile-identity">
+        <div class="profile-name" id="profileName">Orael Miner</div>
+        <div class="profile-username" id="profileUsername"></div>
+        <div class="profile-badges">
+          <span class="profile-pill" id="profileTier">Tier 1</span>
+          <span class="profile-pill pro" id="profileProBadge" style="display:none">PRO</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Avatar picker -->
+    <div class="profile-section">
+      <div class="profile-section-title">Avatar</div>
+      <div class="avatar-grid" id="avatarGrid"></div>
+      <div class="avatar-actions">
+        <label class="btn btn-ghost avatar-upload-btn">
+          <svg viewBox="0 0 24 24" fill="none" style="width:16px;height:16px;"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Upload from device
+          <input type="file" id="avatarFile" accept="image/png,image/jpeg,image/webp" hidden />
+        </label>
+        <button class="btn btn-ghost" id="avatarResetBtn">Random</button>
+      </div>
+    </div>
+
+    <!-- Pro subscription (relocated from wallet) -->
+    <div class="profile-section pro-section">
+      <div class="pro-head">
+        <svg class="pro-crown" viewBox="0 0 24 24" fill="none"><path d="M3 7l5 4 4-7 4 7 5-4-2 12H5L3 7z" stroke="#fbbf24" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 20h14" stroke="#fbbf24" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <div><div class="ph-t">Orael Pro</div><div class="ph-s">Mine 2× faster · save on fees · free daily chest</div></div>
+      </div>
+      <ul class="pro-perks">
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>2× base mining rate, always on</li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>5% withdrawal fee (vs 10%) + priority payouts</li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Free daily mystery chest (150-200 ORL, no ad needed)</li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Exclusive Pro badge</li>
+      </ul>
+      <button class="btn btn-stars" id="proBtn">
+        <svg class="stars-ico" viewBox="0 0 24 24" fill="#1c1109"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2z"/></svg>
+        Go Pro · 250 Telegram Stars / mo
+      </button>
+      <button class="btn btn-ghost" id="proChestBtn" style="margin-top:8px;display:none">Claim free daily chest</button>
+      <button class="btn btn-ghost" id="proDevBtn" style="margin-top:8px;display:none">Activate Pro (dev preview)</button>
+    </div>
+
+    <button class="btn btn-ghost" id="profileViewTiers" style="width:100%;margin-top:12px">View tier progress</button>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ===================== ADMIN OVERLAY (in-bot control panel) ===================== -->
+<!-- Tap the topbar ADMIN chip to open. Full-screen overlay with 9 tabs.
+     Only visible to users with role=admin/mod (the chip itself is gated by
+     the `is-admin` body class set in render()). -->
+<div class="admin-veil" id="adminVeil" aria-hidden="true">
+  <div class="admin-shell">
+    <header class="admin-header">
+      <div class="admin-title">
+        <span class="admin-shield">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <div>
+          <h2>Admin Control Panel</h2>
+          <div class="admin-sub" id="adminSub">Loading…</div>
+        </div>
+      </div>
+      <button class="admin-close" id="adminClose" aria-label="Close admin panel">&times;</button>
+    </header>
+
+    <nav class="admin-tabs" id="adminTabs" role="tablist" aria-label="Admin sections">
+      <button class="admin-tab active" data-tab="dashboard" role="tab">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="12" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="16" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="admin-tab" data-tab="users" role="tab">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M16 7.5a3 3 0 0 1 0 5.8M18 14.5a5 5 0 0 1 3 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span>Users</span>
+      </button>
+      <button class="admin-tab" data-tab="withdrawals" role="tab">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 7h18v10H3z" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18M7 14h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span>Withdrawals</span>
+      </button>
+      <button class="admin-tab" data-tab="transactions" role="tab">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h10M4 17h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span>Transactions</span>
+      </button>
+      <button class="admin-tab" data-tab="economy" role="tab">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v10M9.5 9.5c0-1.4 1.1-2 2.5-2s2.5.7 2.5 2-1.1 2-2.5 2-2.5.7-2.5 2 1.1 2 2.5 2 2.5-.6 2.5-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>Economy</span>
+      </button>
+      <button class="admin-tab" data-tab="promos" role="tab">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M20.5 7v10l-3-2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h12.5l3-2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 11v2M16 11v2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span>Promos</span>
+      </button>
+      <button class="admin-tab" data-tab="audit" role="tab">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 4h11l3 3v13H5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span>Audit</span>
+      </button>
+      <button class="admin-tab" data-tab="broadcast" role="tab">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 11l15-6v14L3 13z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3 11v2M9 14v3a2 2 0 0 0 4 0v-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span>Broadcast</span>
+      </button>
+      <button class="admin-tab" data-tab="settings" role="tab">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <div class="admin-body" id="adminBody" role="tabpanel">
+      <div class="admin-loading">
+        <div class="spinner"></div>
+        <span>Loading admin panel…</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TELEGRAM GATE (Premium animated) ===================== -->
+<div class="tg-gate" id="tg-gate" style="display: none;">
+  <div class="gate-inner">
+    <div class="tg-logo-wrap">
+      <div class="tg-logo-ring-2"></div>
+      <div class="tg-logo-ring"></div>
+      <div class="tg-logo-bg"></div>
+      <svg class="tg-logo" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15.82-.78 4.54-1.1 6.25-.14.72-.4 1.13-.66 1.16-.56.05-1-.37-1.54-.73-.85-.56-1.33-.91-2.16-1.45-.96-.63-.34-.98.21-1.55.14-.15 2.66-2.44 2.71-2.65.01-.03.01-.13-.05-.18-.06-.05-.15-.03-.21-.02-.09.02-1.58 1-4.47 2.96-.42.29-.8.43-1.14.42-.38-.01-1.11-.22-1.65-.39-.66-.22-1.19-.33-1.14-.7.03-.19.29-.39.8-.59 3.12-1.36 5.2-2.26 6.24-2.7 2.97-1.26 3.59-1.48 3.99-1.48.09 0 .28.02.4.12.1.08.13.19.14.28 0 .04.01.16 0 .25z"/>
+      </svg>
+    </div>
+    <h2>Open in Telegram</h2>
+    <p>Orael runs inside Telegram to keep your earnings secure and unlock real-time rewards, daily challenges, and instant payouts.</p>
+    <div class="gate-features">
+      <span class="gate-pill"><svg viewBox="0 0 24 24" fill="none"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Mine ORL</span>
+      <span class="gate-pill"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M10 9l5 3-5 3V9z" fill="currentColor"/></svg>Play &amp; Win</span>
+      <span class="gate-pill"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2.5" stroke="currentColor" stroke-width="1.8"/></svg>Cash Out</span>
+      <span class="gate-pill"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Refer &amp; Earn</span>
+    </div>
+    <a href="https://t.me/Orael_bot" class="gate-btn" target="_blank">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+      Launch Orael in Telegram
+    </a>
+    <div class="gate-footer">Free to play · No deposit required</div>
+  </div>
+</div>
+
+<!-- ===================== BANNED GATE ===================== -->
+<div class="tg-gate ban-gate" id="ban-gate" style="display: none;">
+  <div class="gate-inner">
+    <div class="tg-logo-wrap">
+      <div class="tg-logo-ring-2"></div>
+      <div class="tg-logo-ring"></div>
+      <div class="tg-logo-bg"></div>
+      <svg class="tg-logo" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+      </svg>
+    </div>
+    <h2>Access Suspended</h2>
+    <p>Your account has been banned due to violation of our terms of service. Contact support if you believe this is an error.</p>
+  </div>
+</div>
+
+<!-- ===================== TUTORIAL OVERLAY (NEW) ===================== -->
+<div class="tutorial-veil" id="tutorialVeil">
+  <div class="tutorial-sheet">
+    <div class="tutorial-progress" id="tutorialProgress"></div>
+    <div class="tutorial-illustration" id="tutorialIllustration"></div>
+    <h2 class="tutorial-title" id="tutorialTitle">Welcome to Orael</h2>
+    <p class="tutorial-body" id="tutorialBody">Let's get you started.</p>
+    <div class="tutorial-buttons">
+      <button class="btn btn-ghost" id="tutorialBack">Back</button>
+      <button class="btn btn-primary" id="tutorialNext">Next</button>
+    </div>
+    <button class="tutorial-skip" id="tutorialSkip">Skip tutorial</button>
+  </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

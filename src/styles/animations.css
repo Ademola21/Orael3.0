@@ -1,0 +1,288 @@
+/* =========================================================================
+   ORAEL — Animation Library
+   Reusable motion utilities that make the entire bot feel alive.
+   No neon, no glow — just smooth, premium HD motion.
+   ========================================================================= */
+
+/* ─── Screen transitions (Miner / Play / Earn / Wallet) ───────── */
+.screen {
+  animation: screenEnter 0.45s var(--ease-out);
+}
+@keyframes screenEnter {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.screen.slide-left  { animation: screenEnterLeft 0.45s var(--ease-out); }
+.screen.slide-right { animation: screenEnterRight 0.45s var(--ease-out); }
+@keyframes screenEnterLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes screenEnterRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ─── Card stagger entrance (scroll-reveal) ───────────────────── */
+.card, .feat, .item, .stat, .day, .ref-stat {
+  animation: cardReveal 0.55s var(--ease-out) backwards;
+}
+.feat:nth-child(1) { animation-delay: 0.05s; }
+.feat:nth-child(2) { animation-delay: 0.12s; }
+.feat:nth-child(3) { animation-delay: 0.19s; }
+.feat:nth-child(4) { animation-delay: 0.26s; }
+.feat:nth-child(5) { animation-delay: 0.33s; }
+.feat:nth-child(6) { animation-delay: 0.40s; }
+
+@keyframes cardReveal {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Card hover lift (subtle, premium) ───────────────────────── */
+.card, .feat, .item, .stat {
+  transition: transform 0.25s var(--ease), border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+.card:hover, .feat:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 var(--edge-hi);
+}
+.item:hover {
+  transform: translateX(2px);
+  border-color: rgba(251, 191, 36, 0.2);
+}
+
+/* ─── Button press feedback (spring scale) ────────────────────── */
+.btn, .faucet-btn, .nav-btn, .seg button, .chip-go, .pg-btn, .referral button {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s var(--ease-spring), filter 0.2s, box-shadow 0.2s;
+}
+.btn:active, .faucet-btn:active, .nav-btn:active, .seg button:active, .chip-go:active, .pg-btn:active {
+  transform: scale(0.96);
+}
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: var(--shadow-gold), inset 0 1px 0 rgba(255, 245, 200, 0.5), 0 6px 20px rgba(251, 191, 36, 0.3);
+}
+.btn-ghost:hover:not(:disabled) {
+  border-color: var(--gold-2);
+  color: var(--gold-1);
+}
+
+/* ─── Ripple effect on click ──────────────────────────────────── */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(0);
+  animation: rippleExpand 0.6s var(--ease-out);
+  pointer-events: none;
+}
+@keyframes rippleExpand {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* ─── Number count-up (balance changes) ───────────────────────── */
+.count-up {
+  display: inline-block;
+  transition: color 0.3s var(--ease);
+}
+.count-up.flash-up {
+  animation: flashUp 0.6s var(--ease-out);
+}
+.count-up.flash-down {
+  animation: flashDown 0.6s var(--ease-out);
+}
+@keyframes flashUp {
+  0%   { color: var(--ink); transform: scale(1); }
+  30%  { color: var(--emerald); transform: scale(1.06); }
+  100% { color: var(--ink); transform: scale(1); }
+}
+@keyframes flashDown {
+  0%   { color: var(--ink); transform: scale(1); }
+  30%  { color: var(--ruby); transform: scale(0.96); }
+  100% { color: var(--ink); transform: scale(1); }
+}
+
+/* ─── Pulse glow on actionable items (subtle, attention-grabbing) ─ */
+.pulse-glow {
+  animation: pulseGlowAction 2.5s ease-in-out infinite;
+}
+@keyframes pulseGlowAction {
+  0%, 100% { box-shadow: var(--shadow-md), inset 0 1px 0 var(--edge-hi), 0 0 0 0 rgba(251, 191, 36, 0); }
+  50%      { box-shadow: var(--shadow-md), inset 0 1px 0 var(--edge-hi), 0 0 0 6px rgba(251, 191, 36, 0.08); }
+}
+
+/* Primary CTA breathing animation (when ready to claim) */
+.btn-primary.ready {
+  animation: btnBreathe 2.4s ease-in-out infinite;
+}
+@keyframes btnBreathe {
+  0%, 100% { box-shadow: var(--shadow-gold), inset 0 1px 0 rgba(255, 245, 200, 0.5), 0 0 0 0 rgba(251, 191, 36, 0.5); }
+  50%      { box-shadow: var(--shadow-gold), inset 0 1px 0 rgba(255, 245, 200, 0.5), 0 0 0 10px rgba(251, 191, 36, 0); }
+}
+
+/* ─── Live mining indicator (pulsing dot) ─────────────────────── */
+.live-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--emerald);
+  margin-right: 6px;
+  vertical-align: middle;
+  box-shadow: 0 0 8px var(--emerald);
+  animation: livePulse 1.8s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.8); }
+}
+.live-dot.idle {
+  background: var(--ink-faint);
+  box-shadow: none;
+  animation: none;
+}
+
+/* ─── Confetti for big wins (500+ ORL) ────────────────────────── */
+.confetti-piece {
+  position: fixed;
+  width: 8px; height: 12px;
+  top: -20px;
+  z-index: 95;
+  pointer-events: none;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  0%   { transform: translateY(0) rotate(0); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+/* ─── Shimmer loading ─────────────────────────────────────────── */
+.shimmer {
+  background: linear-gradient(90deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);
+  background-size: 200% 100%;
+  animation: shimmerSlide 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+@keyframes shimmerSlide {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Fade-in for dynamically added elements ──────────────────── */
+.fade-in {
+  animation: fadeInUp 0.4s var(--ease-out);
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Bounce-in for rewards ───────────────────────────────────── */
+.bounce-in {
+  animation: bounceIn 0.6s var(--ease-spring);
+}
+@keyframes bounceIn {
+  0%   { opacity: 0; transform: scale(0.3); }
+  50%  { opacity: 1; transform: scale(1.1); }
+  70%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+/* ─── Slide-in from top (for new leaderboard entries) ─────────── */
+.slide-in-top {
+  animation: slideInTop 0.5s var(--ease-out);
+}
+@keyframes slideInTop {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Subtle parallax on scroll for hero cards ────────────────── */
+.parallax-card {
+  will-change: transform;
+  transition: transform 0.1s linear;
+}
+
+/* ─── Tab indicator slide (segmented control) ─────────────────── */
+.seg {
+  position: relative;
+}
+.seg button.on::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--bg-3), var(--bg-2));
+  z-index: -1;
+  animation: tabSlide 0.3s var(--ease-out);
+}
+@keyframes tabSlide {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ─── Pulse on Pro chip ───────────────────────────────────────── */
+body.is-pro .pro-chip {
+  animation: proChipPulse 3s ease-in-out infinite;
+}
+@keyframes proChipPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+  50%      { box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15); }
+}
+
+/* ─── Mining rig segment fill animation ───────────────────────── */
+.rig-seg.on {
+  animation: rigFill 0.5s var(--ease-out);
+}
+@keyframes rigFill {
+  from { transform: scaleX(0); transform-origin: left; }
+  to   { transform: scaleX(1); transform-origin: left; }
+}
+
+/* ─── Gauge needle subtle pulse when mining ───────────────────── */
+.gauge-arc-fg {
+  animation: gaugePulse 4s ease-in-out infinite;
+}
+@keyframes gaugePulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.85; }
+}
+
+/* ─── Tier badge hover expand ─────────────────────────────────── */
+.tier-badge {
+  transition: transform 0.2s var(--ease-spring);
+}
+.tier-badge:hover {
+  transform: scale(1.15) rotate(-5deg);
+}
+
+/* ─── Avatar entrance animation ───────────────────────────────── */
+.user-chip .av {
+  animation: avatarIn 0.5s var(--ease-spring);
+}
+@keyframes avatarIn {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ─── Bottom nav icon bounce on active ────────────────────────── */
+.nav-btn.active svg {
+  animation: navIconBounce 0.4s var(--ease-spring);
+}
+@keyframes navIconBounce {
+  0%   { transform: translateY(0) scale(1); }
+  40%  { transform: translateY(-4px) scale(1.15); }
+  100% { transform: translateY(-2px) scale(1.08); }
+}
+
+/* ─── Reduced motion (accessibility) ──────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

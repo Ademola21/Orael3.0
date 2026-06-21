@@ -1,0 +1,80 @@
+/* =========================================================================
+   WALLET — premium sapphire with gold accents
+   ========================================================================= */
+.withdraw-head { padding: 24px 22px; text-align: center; margin-bottom: 14px; }
+.withdraw-head .wl { font-size: 12px; color: var(--ink-mute); letter-spacing: 0.06em; text-transform: uppercase; }
+.withdraw-head .wv {
+  font-family: var(--font-display); font-weight: 700; font-size: 40px;
+  margin-top: 6px; font-variant-numeric: tabular-nums;
+  background: linear-gradient(135deg, var(--ink) 0%, var(--gold-1) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.withdraw-head .wf { font-size: 13px; color: var(--emerald); margin-top: 4px; font-weight: 600; }
+.progress {
+  height: 10px; border-radius: 100px; background: var(--bg-inset);
+  margin: 16px 0 8px; overflow: hidden; border: 1px solid var(--line);
+}
+.progress > i {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, var(--gold-2), var(--gold-1));
+  border-radius: 100px; transition: width 0.5s var(--ease);
+  box-shadow: 0 0 8px var(--gold-glow);
+}
+.progress-cap { font-size: 11.5px; color: var(--ink-mute); display: flex; justify-content: space-between; }
+
+.method-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+@media (max-width: 380px) {
+  .method-grid { grid-template-columns: 1fr 1fr; }
+}
+.method {
+  padding: 16px 12px; border-radius: var(--r-md); cursor: pointer;
+  background: var(--grad-card);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 var(--edge-hi);
+  transition: all 0.2s var(--ease);
+}
+.method:active { transform: scale(0.97); }
+.method.sel {
+  border-color: var(--gold-2);
+  background: linear-gradient(155deg, rgba(251, 191, 36, 0.08) 0%, var(--bg-2) 70%);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--gold-2), inset 0 1px 0 var(--edge-hi);
+}
+.method .m-ic { width: 28px; height: 28px; color: var(--gold-1); margin-bottom: 9px; }
+.method .m-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+.method .m-min { font-size: 10.5px; color: var(--ink-mute); margin-top: 2px; }
+
+/* =========================================================================
+   PRO MINER (Wallet) — premium violet + gold
+   ========================================================================= */
+.pro {
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  background:
+    radial-gradient(120% 80% at 90% -20%, rgba(139, 92, 246, 0.16), transparent 60%),
+    radial-gradient(80% 60% at 10% 110%, rgba(251, 191, 36, 0.08), transparent 50%),
+    var(--grad-card);
+}
+.pro-head { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
+.pro-crown { width: 40px; height: 40px; color: var(--gold-1); }
+.pro-head .ph-t { font-family: var(--font-display); font-weight: 700; font-size: 19px; color: var(--ink); }
+.pro-head .ph-s { font-size: 12px; color: var(--ink-mute); }
+.pro-perks { list-style: none; margin-bottom: 16px; }
+.pro-perks li {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13.5px; color: var(--ink-soft); padding: 7px 0;
+}
+.pro-perks li svg { width: 18px; height: 18px; color: var(--emerald); flex-shrink: 0; }
+.btn-stars {
+  background: linear-gradient(135deg, var(--violet), var(--gold-2));
+  color: #fff;
+}
+.stars-ico { width: 18px; height: 18px; }
+
+/* fee note */
+.fee-note { font-size: 11.5px; color: var(--ink-faint); text-align: center; margin: 8px 4px 0; line-height: 1.5; }
+.fee-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-mute); padding: 6px 2px; }
+.fee-row.tot {
+  color: var(--ink); font-weight: 600;
+  border-top: 1px solid var(--line-strong); margin-top: 6px; padding-top: 10px;
+}
+.fee-row b { font-family: var(--font-mono); color: var(--gold-1); }

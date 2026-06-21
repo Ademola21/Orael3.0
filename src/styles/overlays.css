@@ -1,0 +1,132 @@
+/* =========================================================================
+   AD OVERLAY
+   ========================================================================= */
+.ad-veil {
+  position: fixed; inset: 0; z-index: 60; display: none;
+  background: rgba(10, 14, 26, 0.88); backdrop-filter: blur(8px);
+  align-items: center; justify-content: center; padding: 30px;
+  animation: fade 0.3s ease;
+}
+.ad-veil.show { display: flex; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.ad-box {
+  width: 100%; max-width: 360px; text-align: center;
+  background: var(--grad-card);
+  border: 1px solid var(--line-strong); border-radius: var(--r-xl);
+  padding: 32px 26px; box-shadow: var(--shadow-lg);
+}
+.ad-ring { width: 88px; height: 88px; margin: 0 auto 18px; position: relative; }
+.ad-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ad-ring .ad-num {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 700; font-size: 26px; color: var(--gold-1);
+}
+.ad-box h3 { font-family: var(--font-display); font-size: 19px; margin-bottom: 6px; color: var(--ink); }
+.ad-box p { font-size: 13px; color: var(--ink-mute); line-height: 1.5; }
+.ad-tag { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-faint); margin-top: 18px; }
+
+/* =========================================================================
+   TOAST
+   ========================================================================= */
+.toast-wrap {
+  position: fixed; left: 0; right: 0; bottom: calc(var(--nav-h) + var(--safe-bot) + 16px);
+  z-index: 70; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none;
+}
+.toast {
+  background: var(--grad-elevated);
+  border: 1px solid var(--line-strong); border-radius: 100px;
+  padding: 11px 20px; font-size: 13.5px; font-weight: 600; color: var(--ink);
+  box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 9px;
+  animation: toastIn 0.4s var(--ease-spring);
+}
+.toast .tcoin { color: var(--gold-1); font-family: var(--font-mono); }
+@keyframes toastIn { from { opacity: 0; transform: translateY(14px) scale(0.96); } to { opacity: 1; transform: none; } }
+
+/* =========================================================================
+   REWARD MODAL
+   ========================================================================= */
+.modal-veil {
+  position: fixed; inset: 0; z-index: 65; display: none; align-items: center; justify-content: center;
+  background: rgba(10, 14, 26, 0.84); backdrop-filter: blur(8px); padding: 28px; animation: fade 0.3s ease;
+}
+.modal-veil.show { display: flex; }
+.modal {
+  width: 100%; max-width: 340px; text-align: center; padding: 30px 24px;
+  background: var(--grad-card);
+  border: 1px solid var(--line-strong); border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg); animation: rise 0.5s var(--ease-spring);
+}
+.modal .m-burst {
+  width: 70px; height: 70px; margin: 0 auto 14px; color: var(--gold-1);
+  animation: burst 0.8s var(--ease-spring);
+}
+@keyframes burst {
+  0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+  60% { transform: scale(1.15) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
+}
+.modal h3 { font-family: var(--font-display); font-size: 20px; margin-bottom: 6px; color: var(--ink); }
+.modal .m-amt {
+  font-family: var(--font-display); font-weight: 700; font-size: 36px;
+  background: linear-gradient(135deg, var(--gold-1), var(--gold-2));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 6px 0;
+}
+.modal p { font-size: 13px; color: var(--ink-mute); line-height: 1.5; margin-bottom: 18px; }
+.modal .btn { margin-top: 4px; }
+
+/* =========================================================================
+   TUTORIAL OVERLAY — NEW (onboarding flow)
+   ========================================================================= */
+.tutorial-veil {
+  position: fixed; inset: 0; z-index: 80; display: none;
+  align-items: flex-end; justify-content: center;
+  background: rgba(10, 14, 26, 0.92); backdrop-filter: blur(10px);
+  animation: fade 0.4s ease;
+}
+.tutorial-veil.show { display: flex; }
+.tutorial-sheet {
+  width: 100%; max-width: 460px; padding: 30px 24px calc(var(--safe-bot) + 24px);
+  background: var(--grad-card);
+  border-top: 1px solid var(--line-strong); border-radius: 32px 32px 0 0;
+  box-shadow: var(--shadow-lg);
+  animation: sheetUp 0.5s var(--ease-spring);
+}
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.tutorial-progress { display: flex; gap: 6px; margin-bottom: 24px; }
+.tutorial-dot {
+  flex: 1; height: 4px; border-radius: 2px; background: var(--bg-inset);
+  transition: all 0.3s var(--ease);
+}
+.tutorial-dot.active { background: linear-gradient(90deg, var(--gold-2), var(--gold-1)); }
+.tutorial-dot.done { background: var(--emerald); }
+.tutorial-illustration {
+  width: 120px; height: 120px; margin: 0 auto 24px;
+  display: grid; place-items: center;
+  background: var(--gold-glow); border-radius: 50%;
+  animation: floatBob 3s ease-in-out infinite;
+}
+.tutorial-illustration svg { width: 64px; height: 64px; color: var(--gold-1); }
+@keyframes floatBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.tutorial-title {
+  font-family: var(--font-display); font-weight: 700; font-size: 24px;
+  text-align: center; margin-bottom: 12px; color: var(--ink);
+}
+.tutorial-body {
+  font-size: 14px; color: var(--ink-soft); line-height: 1.6;
+  text-align: center; margin-bottom: 28px;
+}
+.tutorial-body b { color: var(--gold-1); }
+.tutorial-buttons { display: flex; gap: 10px; }
+.tutorial-buttons .btn { flex: 1; }
+.tutorial-skip {
+  background: none; border: none; color: var(--ink-mute);
+  font-family: var(--font-display); font-size: 13px; font-weight: 600;
+  padding: 10px; cursor: pointer; margin-top: 8px; text-align: center; width: 100%;
+}
+
+/* =========================================================================
+   TIER MODAL (existing — updated for new design)
+   ========================================================================= */
+.modal-veil .tier-row { transition: all 0.2s; }

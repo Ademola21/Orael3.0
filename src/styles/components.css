@@ -1,0 +1,160 @@
+/* =========================================================================
+   CARD primitives — premium sapphire with HD depth
+   ========================================================================= */
+.card {
+  background: var(--grad-card);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md), inset 0 1px 0 var(--edge-hi);
+  position: relative;
+}
+
+/* =========================================================================
+   BUTTONS — premium gold gradient for primary actions
+   ========================================================================= */
+.btn {
+  width: 100%; border: none; cursor: pointer; font-family: var(--font-display);
+  font-weight: 600; font-size: 16px; letter-spacing: 0.01em;
+  padding: 17px; border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: transform 0.15s var(--ease-spring), filter 0.2s, box-shadow 0.2s;
+  color: #1a0f06;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary {
+  background: linear-gradient(180deg, var(--gold-1), var(--gold-2));
+  box-shadow: 0 1px 0 rgba(255, 245, 200, 0.5) inset, var(--shadow-gold);
+}
+.btn-primary:disabled {
+  background: var(--bg-3); color: var(--ink-faint);
+  box-shadow: none; cursor: not-allowed;
+}
+.btn-ghost {
+  background: var(--grad-card); color: var(--ink);
+  border: 1px solid var(--line-strong);
+  box-shadow: inset 0 1px 0 var(--edge-hi);
+}
+.btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-stars {
+  background: linear-gradient(135deg, var(--violet), var(--gold-2));
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 8px 24px rgba(139, 92, 246, 0.3);
+}
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+.btn .ico { width: 19px; height: 19px; }
+.btn small { display: block; font-family: var(--font-body); font-weight: 500; font-size: 11px; opacity: 0.7; margin-top: 1px; }
+.btn-stack { display: flex; flex-direction: column; align-items: center; line-height: 1.15; }
+
+/* =========================================================================
+   LIST ITEMS — tasks, history, methods
+   ========================================================================= */
+.list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 15px; border-radius: var(--r-md);
+  background: var(--grad-card);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 var(--edge-hi);
+  transition: all 0.2s var(--ease);
+  cursor: pointer;
+}
+.item:hover { background: var(--grad-card-hover); border-color: var(--line-strong); }
+.item:active { transform: scale(0.98); }
+.item-ic {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  display: grid; place-items: center;
+  background: var(--bg-inset); border: 1px solid var(--line-strong);
+  color: var(--gold-1);
+}
+.item-ic svg { width: 21px; height: 21px; }
+.item-body { flex: 1; min-width: 0; }
+.item-title { font-size: 14.5px; font-weight: 600; color: var(--ink); }
+.item-sub { font-size: 12px; color: var(--ink-mute); margin-top: 2px; }
+.item-reward {
+  font-family: var(--font-mono); font-size: 13px;
+  color: var(--gold-1); white-space: nowrap; font-weight: 700;
+}
+.item-reward.pos { color: var(--emerald); }
+.item-reward.neg { color: var(--ink-mute); }
+.chip-go {
+  padding: 8px 14px; border-radius: 100px; font-size: 13px; font-weight: 600;
+  background: var(--gold-glow); color: var(--gold-1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  font-family: var(--font-display);
+}
+.item.done .chip-go {
+  background: rgba(16, 185, 129, 0.12); color: var(--emerald);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* --- Section sub-card shell --- */
+.feat {
+  background: var(--grad-card);
+  border: 1px solid var(--line-strong); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md), inset 0 1px 0 var(--edge-hi);
+  padding: 18px; margin-bottom: 14px; position: relative; overflow: hidden;
+}
+.feat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.feat-title {
+  font-family: var(--font-display); font-weight: 600; font-size: 16px;
+  display: flex; align-items: center; gap: 9px; color: var(--ink);
+}
+.feat-title svg { width: 19px; height: 19px; color: var(--gold-1); }
+.feat-meta { font-size: 11.5px; color: var(--ink-mute); font-family: var(--font-mono); }
+.feat-sub { font-size: 12.5px; color: var(--ink-mute); line-height: 1.5; margin-top: -6px; margin-bottom: 14px; }
+
+/* small inline pill */
+.tag {
+  font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;
+  padding: 3px 8px; border-radius: 100px; font-family: var(--font-display);
+}
+.tag.cu { color: var(--gold-1); background: var(--gold-glow); border: 1px solid rgba(251, 191, 36, 0.3); }
+.tag.good { color: var(--emerald); background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); }
+.tag.free { color: var(--emerald); background: rgba(16, 185, 129, 0.12); }
+.tag.bad { color: var(--ruby); background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); }
+
+/* segmented control for Earn sub-tabs */
+.seg {
+  display: flex; gap: 4px; padding: 4px; margin-bottom: 16px;
+  background: var(--bg-inset); border: 1px solid var(--line); border-radius: 14px;
+}
+.seg button {
+  flex: 1; border: none; background: none; cursor: pointer; padding: 10px 6px; border-radius: 10px;
+  font-family: var(--font-display); font-weight: 600; font-size: 12.5px; color: var(--ink-mute);
+  transition: all 0.25s var(--ease);
+}
+.seg button.on {
+  background: linear-gradient(180deg, var(--bg-3), var(--bg-2));
+  color: var(--gold-1);
+  box-shadow: inset 0 1px 0 var(--edge-hi), var(--shadow-sm);
+}
+
+.featured {
+  border-color: rgba(251, 191, 36, 0.3) !important;
+  background: linear-gradient(155deg, rgba(251, 191, 36, 0.06) 0%, var(--bg-2) 60%) !important;
+}
+
+/* =========================================================================
+   HINT TEXT
+   ========================================================================= */
+.hint {
+  font-size: 11.5px; color: var(--ink-faint); line-height: 1.5;
+  margin: 12px 0 4px; text-align: center;
+}
+
+/* =========================================================================
+   PAGINATION — for history views
+   ========================================================================= */
+.pagination {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 16px 0 8px;
+}
+.pg-btn {
+  padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line-strong);
+  background: var(--grad-card); color: var(--ink-soft);
+  font-family: var(--font-display); font-weight: 600; font-size: 13px;
+  cursor: pointer; transition: all 0.2s var(--ease);
+}
+.pg-btn:hover:not(:disabled) { background: var(--grad-card-hover); color: var(--gold-1); }
+.pg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pg-info { font-size: 12px; color: var(--ink-mute); font-family: var(--font-mono); }

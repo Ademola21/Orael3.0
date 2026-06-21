@@ -1,0 +1,109 @@
+/* =========================================================================
+   MINER — balance + gauge (premium sapphire)
+   ========================================================================= */
+.balance-card {
+  padding: 22px 22px 18px; margin-bottom: 14px; overflow: hidden;
+  background: linear-gradient(155deg, rgba(251, 191, 36, 0.04) 0%, var(--bg-2) 60%);
+  border: 1px solid rgba(251, 191, 36, 0.15);
+}
+.balance-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.balance-top > div:first-child { flex: 1; min-width: 0; }
+.balance-label { font-size: 12px; color: var(--ink-mute); letter-spacing: 0.06em; text-transform: uppercase; }
+.balance-val {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: clamp(28px, 8vw, 42px); line-height: 1.05; margin-top: 4px;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.02em; white-space: nowrap;
+  background: linear-gradient(135deg, var(--ink) 0%, var(--gold-1) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.balance-val .unit { font-size: 17px; color: var(--gold-2); margin-left: 6px; font-weight: 500; -webkit-text-fill-color: var(--gold-2); }
+.balance-fiat { font-size: 13px; color: var(--ink-mute); margin-top: 5px; }
+.balance-fiat b { color: var(--emerald); font-weight: 600; }
+
+/* live earnings ticker line */
+.ticker {
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.ticker .t-label { font-size: 11px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.12em; }
+.ticker .t-val { font-family: var(--font-mono); font-size: 13px; color: var(--ink-soft); }
+
+/* --- Engine gauge --- */
+.engine {
+  padding: 8px 0 22px; display: flex; flex-direction: column; align-items: center;
+}
+.gauge-wrap { position: relative; width: 260px; height: 260px; }
+.gauge-svg { width: 100%; height: 100%; transform: rotate(135deg); }
+.gauge-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+}
+.gauge-energy {
+  font-family: var(--font-display); font-weight: 700; font-size: 52px;
+  font-variant-numeric: tabular-nums; line-height: 1; color: var(--ink);
+}
+.gauge-energy .pct { font-size: 22px; color: var(--ink-mute); }
+.gauge-cap { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-faint); margin-top: 8px; }
+.gauge-status {
+  margin-top: 10px; font-size: 12px; font-weight: 600;
+  padding: 5px 14px; border-radius: 100px;
+  background: rgba(16, 185, 129, 0.12); color: var(--emerald);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.gauge-status.empty {
+  background: rgba(239, 68, 68, 0.12); color: var(--ruby);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.gauge-arc-bg { fill: none; stroke: var(--bg-inset); stroke-width: 14; stroke-linecap: round; }
+.gauge-arc-fg {
+  fill: none; stroke: url(#goldGrad); stroke-width: 14; stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s var(--ease);
+}
+.gauge-ticks line { stroke: var(--line-strong); stroke-width: 2; }
+
+/* small stat row beneath gauge */
+.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat {
+  background: var(--grad-card); border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: 14px 12px; text-align: center;
+  box-shadow: var(--shadow-sm), inset 0 1px 0 var(--edge-hi);
+}
+.stat .s-val { font-family: var(--font-display); font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.stat .s-val.cu { color: var(--gold-1); }
+.stat .s-lab { font-size: 10px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 3px; }
+
+/* =========================================================================
+   HOURLY FAUCET (Miner)
+   ========================================================================= */
+.faucet {
+  display: flex; align-items: center; gap: 14px; padding: 15px 16px; margin-bottom: 14px;
+}
+.faucet .drop { width: 40px; height: 40px; color: var(--gold-1); flex-shrink: 0; }
+.faucet-body { flex: 1; }
+.faucet-body .ft { font-size: 14px; font-weight: 600; color: var(--ink); }
+.faucet-body .fs { font-size: 12px; color: var(--ink-mute); margin-top: 2px; font-family: var(--font-mono); }
+.faucet-btn {
+  padding: 11px 18px; border: none; border-radius: 12px; cursor: pointer;
+  font-family: var(--font-display); font-weight: 600; font-size: 14px; color: #1a0f06;
+  background: linear-gradient(180deg, var(--gold-1), var(--gold-2)); white-space: nowrap;
+  box-shadow: 0 1px 0 rgba(255, 245, 200, 0.5) inset, var(--shadow-gold);
+  transition: transform 0.15s var(--ease-spring);
+}
+.faucet-btn:active { transform: scale(0.95); }
+.faucet-btn:disabled { background: var(--bg-3); color: var(--ink-faint); box-shadow: none; cursor: not-allowed; }
+
+/* =========================================================================
+   MINING RIG upgrade (Miner)
+   ========================================================================= */
+.rig-meter { display: flex; gap: 5px; margin: 4px 0 14px; }
+.rig-seg { flex: 1; height: 8px; border-radius: 4px; background: var(--bg-inset); border: 1px solid var(--line); transition: all 0.3s var(--ease); }
+.rig-seg.on {
+  background: linear-gradient(90deg, var(--gold-2), var(--gold-1));
+  border-color: transparent;
+  box-shadow: 0 0 8px var(--gold-glow);
+}
+.rig-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rig-now { font-size: 12.5px; color: var(--ink-mute); }
+.rig-now b { color: var(--gold-1); font-family: var(--font-display); }
