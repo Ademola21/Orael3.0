@@ -73,7 +73,13 @@ body::before {
 }
 .card-title { font-family: var(--font-display); font-weight: 600; font-size: 16px; margin-bottom: 14px; color: var(--ink); }
 
-table { width: 100%; border-collapse: collapse; }
+table { width: 100%; border-collapse: collapse; min-width: 600px; }
+#usersTable, #withdrawalsTable, #transactionsTable {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 10px;
+}
 th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--line); font-size: 13px; }
 th { font-family: var(--font-display); font-weight: 600; color: var(--ink-mute); text-transform: uppercase; font-size: 11px; letter-spacing: 0.08em; }
 td { color: var(--ink-soft); }
@@ -148,6 +154,66 @@ input:focus { border-color: var(--gold-2); }
   animation: toastIn 0.3s ease;
 }
 @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+@media (max-width: 768px) {
+  .admin-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px;
+  }
+  .admin-brand {
+    justify-content: center;
+  }
+  .admin-tabs {
+    justify-content: center;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .admin-tab {
+    padding: 6px 12px;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .admin-container {
+    padding: 12px;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+  }
+  .stat-card {
+    padding: 12px;
+  }
+  .stat-value {
+    font-size: 20px;
+  }
+  .search-bar {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .search-bar button {
+    width: 100%;
+  }
+  .modal {
+    padding: 16px;
+    border-radius: 16px;
+  }
+  .modal-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  .modal-row label {
+    flex: none;
+  }
+}
+@media (max-width: 480px) {
+  #userModalBody > div {
+    grid-template-columns: 1fr !important;
+  }
+}
 </style>
 </head>
 <body>

@@ -1,5 +1,5 @@
+import { REFERRAL_L1_PCT, REFERRAL_L2_PCT } from '../economy.js';
 import { getUserById, updateUser, addTransaction, unlockAchievement } from '../db.js';
-import { getEconomyConfig } from '../settings.js';
 
 /**
  * Pay two-level referral commissions when a user mines ORL.
@@ -13,10 +13,6 @@ import { getEconomyConfig } from '../settings.js';
 export async function payReferralCommission(userId, minedAmount) {
   const user = await getUserById(userId);
   if (!user || !user.referred_by) return;
-
-  const E = getEconomyConfig();
-  const REFERRAL_L1_PCT = E.REFERRAL_L1_PCT;
-  const REFERRAL_L2_PCT = E.REFERRAL_L2_PCT;
 
   // ── L1 commission ──
   const l1Referrer = await getUserById(user.referred_by);

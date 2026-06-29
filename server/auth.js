@@ -23,35 +23,6 @@ const MAX_AUTH_AGE_S = 86_400;
  *  - the `user` field is missing or unparseable
  */
 export default function verifyTelegramInitData(req, res, next) {
-  // ── 0a. DEV_MODE bypass for browser preview ──────────────
-  // When DEV_MODE=true, accept an `X-Dev-Telegram-Id` header in lieu of a
-  // real initData HMAC. This is ONLY for local/sandbox preview — never enabled
-  // in production. The client (devmock.js) sends this header in dev.
-  if (process.env.DEV_MODE === 'true') {
-    const devId = Number(req.headers['x-dev-telegram-id']);
-    if (Number.isFinite(devId) && devId > 0) {
-      try {
-        const dbUser = getUser(devId);
-        if (dbUser && dbUser.banned === 1) {
-          return res.status(403).json({ error: 'User is banned' });
-        }
-        const devUser = {
-          id: devId,
-          first_name: req.headers['x-dev-first-name'] || 'Orael',
-          last_name: req.headers['x-dev-last-name'] || 'Explorer',
-          username: 'orael_explorer',
-          photo_url: req.headers['x-dev-photo-url'] || '',
-        };
-        req.telegramUser = devUser;
-        req.user = devUser;
-        return next();
-      } catch (err) {
-        console.error('[auth] Dev-mode bypass error:', err);
-        return res.status(500).json({ error: 'Dev auth error' });
-      }
-    }
-  }
-
   const BOT_TOKEN = process.env.BOT_TOKEN;
   // ── 0. Ensure the server has a bot token ───────────────────
   if (!BOT_TOKEN) {

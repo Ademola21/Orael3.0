@@ -1,19 +1,10 @@
 /* ========================================================================
-   ads.js — AdsGram rewarded ad player
-   Plays real AdsGram rewarded video ads in production.
-
-   Per AdsGram docs (https://docs.adsgram.ai/publisher/api-reference):
-   - `show()` RESOLVES only when the user watches the ad to the end; it
-     REJECTS on error / skip / no-banner. So `result.done` in `.then` is
-     always true (the dead `else` branch was removed).
-   - The rejection payload is a `ShowPromiseResult` with `.description` (no
-     `.message`), so the catch handler reads `err.description`.
-   - For granular UX we subscribe to `onBannerNotFound` / `onTooLongSession`
-     / `onNonStopShow` on the AdController so we show OUR toast instead of
-     AdsGram's default alert.
+   ads.js — Adsgram rewarded ad player
+   Plays real Adsgram rewarded video ads in production.
    ======================================================================== */
 
 import { haptic } from './telegram.js';
+import { getState } from './state.js';
 
 /** SVG arc circumference for the main gauge */
 export const ARC_LEN = 395.8;
@@ -27,79 +18,110 @@ let adsgramController = null;
 /** @type {boolean} */
 let adPlaying = false;
 
-function showToast(title, body) {
-  import('./ui.js').then(({ toast }) => toast(title, body));
-}
-
 /**
- * Lazily init the AdsGram controller once and attach granular event listeners
- * so we surface OUR toasts (not AdsGram's default alerts) for the recoverable
- * "no ad / slow down / restart" cases.
- */
-function getController() {
-  const blockId = import.meta.env.VITE_ADSGRAM_BLOCK_ID;
-  if (!window.Adsgram || !blockId) return null;
-  if (!adsgramController) {
-    adsgramController = window.Adsgram.init({ blockId });
-    try {
-      adsgramController.addEventListener?.('onBannerNotFound', () => {
-        showToast('No ads right now', 'Please try again in a moment.');
-      });
-      adsgramController.addEventListener?.('onTooLongSession', () => {
-        showToast('Session expired', 'Restart the app to load fresh ads.');
-      });
-      adsgramController.addEventListener?.('onNonStopShow', () => {
-        showToast('Slow down', 'Wait a moment before watching another ad.');
-      });
-    } catch (e) { /* listeners are best-effort */ }
-  }
-  return adsgramController;
-}
-
-/**
- * Play a real AdsGram rewarded ad.
+ * Play a real Adsgram rewarded ad.
  *
- * @param {string}   _title    — unused (AdsGram renders its own UI)
- * @param {string}   _body     — unused
- * @param {number}   _seconds  — unused (AdsGram controls video length)
- * @param {Function} onReward  — callback fired when the ad completes successfully
+ * @param {string}   title     — overlay title text (for logging/compatibility)
+ * @param {string}   body      — overlay body text (for logging/compatibility)
+ * @param {number}   seconds   — countdown duration (ignored as Adsgram handles video length)
+ * @param {Function} onReward  — callback fired when ad completes successfully
  */
-export function playAd(_title, _body, _seconds, onReward) {
-  if (adPlaying) {
-    console.warn('An ad is already playing. Ignoring request.');
-    return;
-  }
+export function playAd(title, body, seconds, onReward) {
+  return new Promise((resolve, reject) => {
+    const S = getState();
+    const isAdmin = S.role === 'admin' || S.role === 'mod' || (S.permissions && S.permissions.length > 0);
 
-  const controller = getController();
-  if (!controller) {
-    showToast('Ad failed to load', 'Please disable ad blockers and try again.');
-    return;
-  }
+    if (isAdmin) {
+      haptic('success');
+      if (onReward) onReward();
+      resolve();
+      return;
+    }
 
-  adPlaying = true;
-  haptic('light');
+    if (adPlaying) {
+      console.warn('An ad is already playing. Ignoring request.');
+      reject(new Error('Ad already playing'));
+      return;
+    }
+    adPlaying = true;
+    haptic('light');
 
-  controller.show()
-    .then((result) => {
-      // Promise only resolves on a completed watch → result.done is true here.
-      adPlaying = false;
-      if (result && result.done) {
-        haptic('success');
-        if (onReward) onReward();
-      } else {
-        // Defensive: treat an unexpected non-done resolve as a skip.
-        showToast('Ad not completed', 'Please watch to the end to earn.');
+    // Show visual loading veil
+    const veil = document.getElementById('adVeil');
+    if (veil) {
+      veil.classList.add('show');
+      const titleEl = document.getElementById('adTitle');
+      const bodyEl = document.getElementById('adBody');
+      const adNumEl = document.getElementById('adNum');
+      if (titleEl && title) titleEl.textContent = title;
+      if (bodyEl && body) bodyEl.textContent = body;
+      if (adNumEl) adNumEl.textContent = '…';
+    }
+
+    const hideVeil = () => {
+      const veil = document.getElementById('adVeil');
+      if (veil) veil.classList.remove('show');
+    };
+
+    const blockId = import.meta.env.VITE_ADSGRAM_BLOCK_ID;
+
+    if (window.Adsgram && blockId) {
+      if (!adsgramController) {
+        adsgramController = window.Adsgram.init({ blockId });
       }
-    })
-    .catch((err) => {
+      adsgramController.show()
+        .then((result) => {
+          adPlaying = false;
+          hideVeil();
+          if (result.done) {
+            haptic('success');
+            if (onReward) onReward();
+            resolve();
+          } else {
+            import('./ui.js').then(({ toast }) => {
+              toast('Ad not completed', 'Please watch to the end');
+            });
+            reject(new Error('Ad not completed'));
+          }
+        })
+        .catch((err) => {
+          adPlaying = false;
+          hideVeil();
+          console.error('Adsgram error:', err);
+          
+          let errMsg = 'No ads available at the moment. Please try again later.';
+          if (err) {
+            errMsg = err.description || err.message || errMsg;
+          }
+
+          // Log error to server for remote diagnostics
+          fetch('/api/log-ad-error', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: S.id,
+              blockId: blockId,
+              error: err ? {
+                message: err.message,
+                description: err.description,
+                code: err.code
+              } : 'Unknown error'
+            })
+          }).catch(e => console.error('Failed to send error log to server:', e));
+
+          import('./ui.js').then(({ toast }) => {
+            toast('Ad Error', errMsg);
+          });
+          reject(err || new Error('Ad error'));
+        });
+    } else {
       adPlaying = false;
-      // ShowPromiseResult has .description (no .message). The granular event
-      // listeners above already toasted onBannerNotFound/onTooLongSession/
-      // onNonStopShow, so only show a generic message for other errors.
-      console.error('Adsgram error:', err);
-      const desc = err && err.description;
-      if (desc && !/banner|session|nonstop/i.test(desc)) {
-        showToast('Ad Error', desc);
-      }
-    });
+      hideVeil();
+      console.error('Adsgram SDK not available or blockId is missing.');
+      import('./ui.js').then(({ toast }) => {
+        toast('Ad failed to load', 'Please disable ad blockers and try again.');
+      });
+      reject(new Error('Adsgram SDK not available'));
+    }
+  });
 }

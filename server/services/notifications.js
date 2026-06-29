@@ -6,17 +6,6 @@
 const TELEGRAM_API_BASE = 'https://api.telegram.org/bot';
 
 /**
- * Escape Telegram MarkdownV1 special characters in user-controlled strings.
- * MarkdownV1 reserves: * _ ` [  — an unescaped one breaks the sendMessage API
- * call (HTTP 400). User names / reasons / descriptions are interpolated into
- * messages, so they MUST be escaped.
- */
-function escapeMd(s) {
-  if (s === null || s === undefined) return '';
-  return String(s).replace(/([*_`\[])/g, '\\$1');
-}
-
-/**
  * Send a Telegram message to a user by their Telegram ID.
  *
  * @param {number} telegramId - user's Telegram ID
@@ -64,7 +53,7 @@ export async function notifyWithdrawalCompleted(telegramId, amount, method, netF
 
 ${methodEmoji} Your withdrawal of *${amount} ORL* has been processed successfully.
 
-💸 You received: *${escapeMd(netFiat)}*
+💸 You received: *${netFiat}*
 
 Thank you for using Orael! ⛏️`;
   return sendTelegramMessage(telegramId, text);
@@ -78,7 +67,7 @@ export async function notifyWithdrawalFailed(telegramId, amount, reason) {
 
 Your withdrawal of *${amount} ORL* could not be processed.
 
-Reason: ${escapeMd(reason || 'Unknown error')}
+Reason: ${reason || 'Unknown error'}
 
 💰 Your ORL has been *refunded* to your balance. Please try again or contact support.`;
   return sendTelegramMessage(telegramId, text);
@@ -90,7 +79,7 @@ Reason: ${escapeMd(reason || 'Unknown error')}
 export async function notifyWithdrawalPendingApproval(telegramId, amount, method) {
   const text = `⏳ *Withdrawal Pending Approval*
 
-Your withdrawal of *${amount} ORL* via ${escapeMd(method)} requires admin approval (large amount).
+Your withdrawal of *${amount} ORL* via ${method} requires admin approval (large amount).
 
 Our team will review and process it within 24 hours.
 
@@ -104,9 +93,9 @@ Thank you for your patience! 🙏`;
 export async function notifyAchievementUnlocked(telegramId, achievementName, description, icon) {
   const text = `🏆 *Achievement Unlocked!*
 
-${escapeMd(icon)} *${escapeMd(achievementName)}*
+${icon} *${achievementName}*
 
-${escapeMd(description)}
+${description}
 
 Keep earning on Orael! ⛏️`;
   return sendTelegramMessage(telegramId, text);
@@ -134,7 +123,7 @@ Mine more, earn more! 🚀`;
 export async function notifyLotteryWin(telegramId, prize, date) {
   const text = `🎉 *Lottery Winner!*
 
-Congratulations! You won the Orael Daily Lottery draw for ${escapeMd(date)}!
+Congratulations! You won the Orael Daily Lottery draw for ${date}!
 
 🏆 Prize: *${prize} ORL* has been credited to your balance.
 
@@ -151,9 +140,9 @@ export async function notifyAdminsPendingWithdrawal(amount, method, userName) {
 
 A large withdrawal is pending approval:
 
-👤 User: ${escapeMd(userName)}
+👤 User: ${userName}
 💰 Amount: *${amount} ORL*
-💳 Method: ${escapeMd(method)}
+💳 Method: ${method}
 
 Open the admin panel to review: /admin`;
   for (const adminId of adminIds) {

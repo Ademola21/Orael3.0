@@ -37,12 +37,6 @@ export async function api(path, options = {}) {
     ...(options.headers || {}),
   };
 
-  // DEV_MODE preview: send the dev Telegram id so the server can auth
-  // without a real initData HMAC.
-  if (window.__ORAEL_DEV__) {
-    headers['X-Dev-Telegram-Id'] = String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id || '');
-  }
-
   try {
     const res = await fetch(path, {
       ...options,

@@ -15,6 +15,8 @@ let savedBankAccounts = [];
 
 export function setupWallet() {
   const withdrawBtn = $('withdrawBtn');
+  const proBtn      = $('proBtn');
+  const proChestBtn = $('proChestBtn');
   const methods     = document.querySelectorAll('.method');
 
   // Load paginated transaction history
@@ -48,10 +50,61 @@ export function setupWallet() {
     withdrawBtn.addEventListener('click', handleWithdraw);
   }
 
-  // Pro subscription + Pro chest are now wired in profile.js (relocated to the
-  // Profile overlay — tap your avatar to access them).
+  // 3. Pro Upgrade action
+  if (proBtn) {
+    proBtn.addEventListener('click', async () => {
+      const tg = window.Telegram?.WebApp;
+      haptic('light');
 
-  // 3. Wire up bank-selection UI handlers
+      try {
+        const res = await api('/api/wallet/pro', { method: 'POST' });
+        if (res.invoiceLink) {
+          if (tg?.openInvoice) {
+            tg.openInvoice(res.invoiceLink, async (status) => {
+              if (status === 'paid') {
+                haptic('success');
+                toast({ title: 'Payment successful!', message: 'Orael Pro active', variant: 'success' });
+                try {
+                  const state = await api('/api/user');
+                  updateState(state);
+                  render();
+                } catch (err) {
+                  console.error('Failed to sync user state after payment:', err);
+                }
+              } else {
+                toast({ title: 'Payment incomplete', message: 'Subscription was not activated', variant: 'error' });
+              }
+            });
+          } else {
+            toast({ title: 'Open inside Telegram', message: 'Stars checkout requires the Telegram app.', variant: 'info' });
+          }
+        } else {
+          toast({ title: 'Error', message: 'Failed to generate invoice link', variant: 'error' });
+        }
+      } catch (e) {
+        // api() toasted
+      }
+    });
+  }
+
+  // 4. Pro free daily chest
+  if (proChestBtn) {
+    proChestBtn.addEventListener('click', async () => {
+      haptic('light');
+      try {
+        const res = await api('/api/mining/pro-chest', { method: 'POST' });
+        if (res.reward) {
+          updateState(res.user);
+          render();
+          reward(res.reward, 'Pro chest unlocked!', 'Free daily chest, no ad needed.');
+        }
+      } catch (e) {
+        // api() toasted
+      }
+    });
+  }
+
+  // 5. Wire up bank-selection UI handlers
   setupBankSelectionUI();
 }
 

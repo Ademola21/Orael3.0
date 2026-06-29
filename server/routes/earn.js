@@ -1,5 +1,13 @@
 import { Router } from 'express';
 import {
+  FAUCET_COOLDOWN,
+  FAUCET_REWARD,
+  TASKS,
+  FEATURED_TASKS,
+  STREAK_AMOUNTS,
+  VIDEO_WALL_REWARD,
+} from '../economy.js';
+import {
   getUser,
   updateUser,
   addTransaction,
@@ -10,8 +18,6 @@ import {
 import { accrueMinedORL } from '../services/mining.js';
 import { trackAdWatched } from '../services/adTracking.js';
 import { getUserState } from './user.js';
-import { getEconomyConfig } from '../settings.js';
-import { isFeatureEnabled } from '../settings.js';
 
 const router = Router();
 
@@ -31,28 +37,24 @@ function yesterdayStr() {
 
 router.post('/faucet', async (req, res) => {
   try {
-    if (!isFeatureEnabled('faucet_enabled')) {
-      return res.status(503).json({ error: 'Faucet is temporarily disabled' });
-    }
     const telegramUser = req.user;
     let user = await getUser(telegramUser.id);
     await accrueMinedORL(user);
 
-    const E = getEconomyConfig();
     const now = Date.now();
     const elapsed = now - (user.faucet_last || 0);
 
-    if (elapsed < E.FAUCET_COOLDOWN) {
-      const remaining = E.FAUCET_COOLDOWN - elapsed;
+    if (elapsed < FAUCET_COOLDOWN) {
+      const remaining = FAUCET_COOLDOWN - elapsed;
       return res.status(400).json({
         error: 'Faucet on cooldown',
         remaining,
       });
     }
 
-    user.balance += E.FAUCET_REWARD;
+    user.balance += FAUCET_REWARD;
     user.faucet_last = now;
-    await addTransaction(user.id, 'faucet', E.FAUCET_REWARD, 'Faucet claim');
+    await addTransaction(user.id, 'faucet', FAUCET_REWARD, 'Faucet claim');
     await updateUser(user);
     await trackAdWatched(user.id);
 
@@ -76,10 +78,9 @@ router.post('/task', async (req, res) => {
       return res.status(400).json({ error: 'Task already completed' });
     }
 
-    const E = getEconomyConfig();
     const task =
-      E.TASKS.find((t) => t.id === taskId) ||
-      E.FEATURED_TASKS.find((t) => t.id === taskId);
+      TASKS.find((t) => t.id === taskId) ||
+      FEATURED_TASKS.find((t) => t.id === taskId);
 
     if (!task) {
       return res.status(400).json({ error: 'Task not found' });
@@ -109,21 +110,17 @@ router.post('/task', async (req, res) => {
 
 router.post('/video-wall', async (req, res) => {
   try {
-    if (!isFeatureEnabled('faucet_enabled')) {
-      return res.status(503).json({ error: 'Video wall is temporarily disabled' });
-    }
     const telegramUser = req.user;
     let user = await getUser(telegramUser.id);
     await accrueMinedORL(user);
 
-    const E = getEconomyConfig();
-    user.balance += E.VIDEO_WALL_REWARD;
-    await addTransaction(user.id, 'video_wall', E.VIDEO_WALL_REWARD, 'Video wall ad reward');
+    user.balance += VIDEO_WALL_REWARD;
+    await addTransaction(user.id, 'video_wall', VIDEO_WALL_REWARD, 'Video wall ad reward');
     await updateUser(user);
     await trackAdWatched(user.id);
 
     return res.json({
-      reward: E.VIDEO_WALL_REWARD,
+      reward: VIDEO_WALL_REWARD,
       user: await getUserState(telegramUser.id)
     });
   } catch (err) {
@@ -163,10 +160,9 @@ router.get('/streak', async (req, res) => {
     const user = await getUser(telegramUser.id);
     const { streakDay, claimed } = computeStreak(user);
 
-    const E = getEconomyConfig();
     return res.json({
       streakDay,
-      amounts: E.STREAK_AMOUNTS,
+      amounts: STREAK_AMOUNTS,
       claimed,
     });
   } catch (err) {
@@ -190,8 +186,7 @@ router.post('/streak', async (req, res) => {
         .json({ error: 'Streak already claimed today' });
     }
 
-    const E = getEconomyConfig();
-    const reward = E.STREAK_AMOUNTS[streakDay - 1];
+    const reward = STREAK_AMOUNTS[streakDay - 1];
     user.balance += reward;
     user.streak_day = streakDay;
     user.streak_last_date = todayStr();

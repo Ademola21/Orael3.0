@@ -39,7 +39,7 @@
     </div>
     <div class="topbar-right">
       <span class="pro-chip"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 7l5 4 4-7 4 7 5-4-2 12H5L3 7z"/></svg>PRO</span>
-      <a class="admin-chip" id="adminChip" href="#" aria-label="Open admin control panel">
+      <a class="admin-chip" id="adminChip" href="#" onclick="window.location.href = '/admin'; return false;">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
         ADMIN
       </a>
@@ -137,13 +137,7 @@
         </div>
         <div class="wheel-wrap">
           <div class="wheel-stage">
-            <div class="wheel-bezel"></div>
-            <div class="wheel-pointer">
-              <svg viewBox="0 0 22 30" fill="none">
-                <path d="M11 30 L2 8 A9 9 0 0 1 20 8 Z" fill="url(#goldGrad)" stroke="#7c2d12" stroke-width="1"/>
-                <circle cx="11" cy="9" r="3" fill="#7c2d12"/>
-              </svg>
-            </div>
+            <div class="wheel-pointer"></div>
             <svg class="wheel" id="wheel" viewBox="0 0 200 200"></svg>
             <div class="wheel-hub">SPIN</div>
           </div>
@@ -159,44 +153,63 @@
           <span class="tag cu" id="scratchTag">Unlimited</span>
         </div>
         <div class="scratch" id="scratch">
-          <div class="scratch-prize" id="scratchPrize">+0<small>ORL</small></div>
-          <canvas class="scratch-canvas" id="scratchCanvas"></canvas>
+          <div class="prize" id="scratchPrize">+0</div>
+          <div class="cover" id="scratchCover">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 12c4-6 12-6 16 0-4 6-12 6-16 0z" stroke="#e0a25b" stroke-width="1.6"/><circle cx="12" cy="12" r="2.5" stroke="#e0a25b" stroke-width="1.6"/></svg>
+            <span>Watch an ad to scratch</span>
+          </div>
         </div>
         <button class="btn btn-ghost" id="scratchBtn">Get a scratch card</button>
       </div>
 
-      <!-- Coin Flip -->
+      <!-- Coin Flip (NEW) -->
       <div class="feat">
         <div class="feat-head">
           <div class="feat-title"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v10M9 10l3-3 3 3M9 14l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Coin flip</div>
           <span class="tag free">Unlimited · 1 ad</span>
         </div>
         <div class="coinflip-stage">
-          <div class="cf-scene">
-            <div class="cf-coin" id="coinflipCoin">
-              <div class="cf-face cf-front">
-                <div class="cf-glyph">
-                  <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 L20 7 L20 17 L12 22 L4 17 L4 7 Z" stroke="#7c2d12" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.4" fill="#7c2d12"/></svg>
-                  <small>HEADS</small>
-                </div>
-                <div class="cf-rim"></div>
+          <div class="coinflip-coin-wrapper">
+            <div class="coinflip-coin" id="coinflipCoin">
+              <div class="coin-face coin-front">
+                <!-- Heads Side -->
+                <svg viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="46" fill="url(#goldGrad)" stroke="#b45309" stroke-width="3"/>
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3 3"/>
+                  <!-- Styled Crown Emblem inside -->
+                  <path d="M32 62 L38 42 L50 54 L62 42 L68 62 Z" fill="#1c1109" stroke="#b45309" stroke-width="1"/>
+                  <circle cx="32" cy="62" r="1.5" fill="#f59e0b"/>
+                  <circle cx="68" cy="62" r="1.5" fill="#f59e0b"/>
+                  <circle cx="38" cy="42" r="2" fill="#f59e0b"/>
+                  <circle cx="50" cy="54" r="2" fill="#f59e0b"/>
+                  <circle cx="62" cy="42" r="2" fill="#f59e0b"/>
+                  <!-- ORL text -->
+                  <text x="50" y="34" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="700" fill="#1c1109">ORAEL</text>
+                  <text x="50" y="76" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="700" fill="#78350f" letter-spacing="0.1em">HEADS</text>
+                </svg>
               </div>
-              <div class="cf-face cf-back">
-                <div class="cf-glyph">
-                  <span style="font-size:26px;">★</span>
-                  <small>TAILS</small>
-                </div>
-                <div class="cf-rim"></div>
+              <div class="coin-face coin-back">
+                <!-- Tails Side -->
+                <svg viewBox="0 0 100 100" fill="none">
+                  <circle cx="50" cy="50" r="46" fill="url(#goldGrad)" stroke="#b45309" stroke-width="3"/>
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3 3"/>
+                  <!-- Stylized Pickaxe/Mining Emblem in center -->
+                  <path d="M50 64 L50 36 M40 38 Q50 48 60 38" stroke="#1c1109" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+                  <path d="M50 34 L50 38" stroke="#f59e0b" stroke-width="4.5" stroke-linecap="round"/>
+                  <!-- ORL text -->
+                  <text x="50" y="30" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="700" fill="#1c1109">ORL COIN</text>
+                  <text x="50" y="76" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="700" fill="#78350f" letter-spacing="0.1em">TAILS</text>
+                </svg>
               </div>
             </div>
           </div>
-          <div class="coinflip-result" id="coinflipResult">Pick heads or tails · win 65 ORL</div>
+          <div class="coinflip-result" id="coinflipResult">Pick heads or tails · win 160 ORL</div>
         </div>
         <div class="coinflip-buttons">
           <button class="btn btn-ghost cf-btn" id="cfHeadsBtn">Heads</button>
           <button class="btn btn-ghost cf-btn" id="cfTailsBtn">Tails</button>
         </div>
-        <p class="hint" style="margin-bottom:0">Win: 65 ORL · Lose: 15 ORL consolation. Watch an ad per flip.</p>
+        <p class="hint" style="margin-bottom:0">Win: 160 ORL · Lose: 40 ORL consolation. Watch an ad per flip.</p>
       </div>
 
       <!-- Mystery chest -->
@@ -224,7 +237,7 @@
         </div>
         <div class="btn-row">
           <button class="btn btn-ghost" id="lottoAdBtn">Free ticket<small>watch ad</small></button>
-          <button class="btn btn-primary" id="lottoBuyBtn">Buy ticket<small>500 ORL</small></button>
+          <button class="btn btn-primary" id="lottoBuyBtn">Buy ticket<small>750 ORL</small></button>
         </div>
       </div>
 
@@ -264,10 +277,10 @@
         <div class="card video-wall" style="padding:16px;margin:10px 0">
           <div class="vw-info">
             <div class="vw-title">Watch &amp; earn · unlimited</div>
-            <div class="vw-reward">+30 ORL per video</div>
+            <div class="vw-reward">+100 ORL per video</div>
           </div>
           <button class="btn btn-primary" id="videoWallBtn">Watch video ad</button>
-          <p class="hint" style="margin-bottom:0;font-size:11px">No daily limit. Each video credits 30 ORL instantly.</p>
+          <p class="hint" style="margin-bottom:0;font-size:11px">No daily limit. Each video credits 100 ORL instantly.</p>
         </div>
 
         <div class="eyebrow">Adsgram Tasks</div>
@@ -317,23 +330,40 @@
         <div class="progress-cap"><span id="wProgLabel">...</span><span>Min. withdrawal</span></div>
       </div>
 
-      <!-- Pro Miner moved to the Profile overlay (tap your avatar). -->
+      <!-- Pro Miner -->
+      <div class="feat pro">
+        <div class="pro-head">
+          <svg class="pro-crown" viewBox="0 0 24 24" fill="none"><path d="M3 7l5 4 4-7 4 7 5-4-2 12H5L3 7z" stroke="#e0a25b" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 20h14" stroke="#e0a25b" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <div><div class="ph-t">Orael Pro</div><div class="ph-s">Mine 2× faster · save on fees · free daily chest</div></div>
+        </div>
+        <ul class="pro-perks">
+          <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>2× base mining rate, always on</li>
+          <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>5% withdrawal fee (vs 10%) + priority payouts</li>
+          <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Free daily mystery chest (450-550 ORL, no ad needed)</li>
+          <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Exclusive Pro badge</li>
+        </ul>
+        <button class="btn btn-stars" id="proBtn">
+          <svg class="stars-ico" viewBox="0 0 24 24" fill="#1c1109"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2z"/></svg>
+          Go Pro · 250 Telegram Stars / mo
+        </button>
+        <button class="btn btn-ghost" id="proChestBtn" style="margin-top:8px;display:none">Claim free daily chest</button>
+      </div>
 
 
 
       <div class="eyebrow">Payout method</div>
       <div class="method-grid" id="methodGrid">
-        <div class="method" id="method-airtime" data-min="20000" data-name="Airtime" data-key="airtime">
+        <div class="method" id="method-airtime" data-min="15000" data-name="Airtime" data-key="airtime">
           <svg class="m-ic" viewBox="0 0 24 24" fill="none"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" stroke="#e0a25b" stroke-width="1.8" stroke-linejoin="round"/></svg>
-          <div class="m-name">Airtime</div><div class="m-min">Min 20,000 ORL · ₦600</div>
+          <div class="m-name">Airtime</div><div class="m-min">Min 15,000 ORL · ₦300</div>
         </div>
         <div class="method sel" id="method-bank" data-min="50000" data-name="Bank (NGN)" data-key="bank">
           <svg class="m-ic" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="#e0a25b" stroke-width="1.8"/><path d="M3 10h18" stroke="#e0a25b" stroke-width="1.8"/></svg>
-          <div class="m-name">Bank (NGN)</div><div class="m-min">Min 50,000 ORL · ₦1,500</div>
+          <div class="m-name">Bank (NGN)</div><div class="m-min">Min 50,000 ORL · ₦1,000</div>
         </div>
-        <div class="method" id="method-usdt" data-min="100000" data-name="USDT" data-key="usdt">
+        <div class="method" id="method-usdt" data-min="75000" data-name="USDT" data-key="usdt">
           <svg class="m-ic" viewBox="0 0 24 24" fill="none"><path d="M12 2v20M7 6h7a3 3 0 0 1 0 6H7m0 0h8a3 3 0 0 1 0 6H7" stroke="#e0a25b" stroke-width="1.8" stroke-linecap="round"/></svg>
-          <div class="m-name">USDT (TRC20)</div><div class="m-min">Min 100,000 ORL · $2.00</div>
+          <div class="m-name">USDT (TRC20)</div><div class="m-min">Min 75,000 ORL · $1.00</div>
         </div>
       </div>
 
@@ -466,131 +496,7 @@
   </div>
 </div>
 
-<!-- ===================== PROFILE OVERLAY ===================== -->
-<!-- Tap the topbar avatar to open. Houses avatar picker, Pro subscription,
-     and a link to the tier-progression modal. -->
-<div class="modal-veil" id="profileVeil">
-  <div class="modal profile-modal">
-    <button class="profile-close" id="profileClose" aria-label="Close">&times;</button>
-
-    <div class="profile-head">
-      <div class="profile-avatar" id="profileAvatar">A</div>
-      <div class="profile-identity">
-        <div class="profile-name" id="profileName">Orael Miner</div>
-        <div class="profile-username" id="profileUsername"></div>
-        <div class="profile-badges">
-          <span class="profile-pill" id="profileTier">Tier 1</span>
-          <span class="profile-pill pro" id="profileProBadge" style="display:none">PRO</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Avatar picker -->
-    <div class="profile-section">
-      <div class="profile-section-title">Avatar</div>
-      <div class="avatar-grid" id="avatarGrid"></div>
-      <div class="avatar-actions">
-        <label class="btn btn-ghost avatar-upload-btn">
-          <svg viewBox="0 0 24 24" fill="none" style="width:16px;height:16px;"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          Upload from device
-          <input type="file" id="avatarFile" accept="image/png,image/jpeg,image/webp" hidden />
-        </label>
-        <button class="btn btn-ghost" id="avatarResetBtn">Random</button>
-      </div>
-    </div>
-
-    <!-- Pro subscription (relocated from wallet) -->
-    <div class="profile-section pro-section">
-      <div class="pro-head">
-        <svg class="pro-crown" viewBox="0 0 24 24" fill="none"><path d="M3 7l5 4 4-7 4 7 5-4-2 12H5L3 7z" stroke="#fbbf24" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 20h14" stroke="#fbbf24" stroke-width="1.6" stroke-linecap="round"/></svg>
-        <div><div class="ph-t">Orael Pro</div><div class="ph-s">Mine 2× faster · save on fees · free daily chest</div></div>
-      </div>
-      <ul class="pro-perks">
-        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>2× base mining rate, always on</li>
-        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>5% withdrawal fee (vs 10%) + priority payouts</li>
-        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Free daily mystery chest (150-200 ORL, no ad needed)</li>
-        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Exclusive Pro badge</li>
-      </ul>
-      <button class="btn btn-stars" id="proBtn">
-        <svg class="stars-ico" viewBox="0 0 24 24" fill="#1c1109"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2z"/></svg>
-        Go Pro · 250 Telegram Stars / mo
-      </button>
-      <button class="btn btn-ghost" id="proChestBtn" style="margin-top:8px;display:none">Claim free daily chest</button>
-      <button class="btn btn-ghost" id="proDevBtn" style="margin-top:8px;display:none">Activate Pro (dev preview)</button>
-    </div>
-
-    <button class="btn btn-ghost" id="profileViewTiers" style="width:100%;margin-top:12px">View tier progress</button>
-  </div>
-</div>
-
 <div class="toast-wrap" id="toastWrap"></div>
-
-<!-- ===================== ADMIN OVERLAY (in-bot control panel) ===================== -->
-<!-- Tap the topbar ADMIN chip to open. Full-screen overlay with 9 tabs.
-     Only visible to users with role=admin/mod (the chip itself is gated by
-     the `is-admin` body class set in render()). -->
-<div class="admin-veil" id="adminVeil" aria-hidden="true">
-  <div class="admin-shell">
-    <header class="admin-header">
-      <div class="admin-title">
-        <span class="admin-shield">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </span>
-        <div>
-          <h2>Admin Control Panel</h2>
-          <div class="admin-sub" id="adminSub">Loading…</div>
-        </div>
-      </div>
-      <button class="admin-close" id="adminClose" aria-label="Close admin panel">&times;</button>
-    </header>
-
-    <nav class="admin-tabs" id="adminTabs" role="tablist" aria-label="Admin sections">
-      <button class="admin-tab active" data-tab="dashboard" role="tab">
-        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="12" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="16" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>
-        <span>Dashboard</span>
-      </button>
-      <button class="admin-tab" data-tab="users" role="tab">
-        <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M16 7.5a3 3 0 0 1 0 5.8M18 14.5a5 5 0 0 1 3 4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-        <span>Users</span>
-      </button>
-      <button class="admin-tab" data-tab="withdrawals" role="tab">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M3 7h18v10H3z" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18M7 14h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-        <span>Withdrawals</span>
-      </button>
-      <button class="admin-tab" data-tab="transactions" role="tab">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h10M4 17h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-        <span>Transactions</span>
-      </button>
-      <button class="admin-tab" data-tab="economy" role="tab">
-        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v10M9.5 9.5c0-1.4 1.1-2 2.5-2s2.5.7 2.5 2-1.1 2-2.5 2-2.5.7-2.5 2 1.1 2 2.5 2 2.5-.6 2.5-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        <span>Economy</span>
-      </button>
-      <button class="admin-tab" data-tab="promos" role="tab">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M20.5 7v10l-3-2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h12.5l3-2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 11v2M16 11v2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-        <span>Promos</span>
-      </button>
-      <button class="admin-tab" data-tab="audit" role="tab">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M5 4h11l3 3v13H5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        <span>Audit</span>
-      </button>
-      <button class="admin-tab" data-tab="broadcast" role="tab">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M3 11l15-6v14L3 13z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3 11v2M9 14v3a2 2 0 0 0 4 0v-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-        <span>Broadcast</span>
-      </button>
-      <button class="admin-tab" data-tab="settings" role="tab">
-        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-        <span>Settings</span>
-      </button>
-    </nav>
-
-    <div class="admin-body" id="adminBody" role="tabpanel">
-      <div class="admin-loading">
-        <div class="spinner"></div>
-        <span>Loading admin panel…</span>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- ===================== TELEGRAM GATE (Premium animated) ===================== -->
 <div class="tg-gate" id="tg-gate" style="display: none;">

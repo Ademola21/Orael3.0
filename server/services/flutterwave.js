@@ -16,6 +16,16 @@
 const FLW_BASE = 'https://api.flutterwave.com/v3';
 
 /**
+ * Check if mock mode is active (when dummy keys are configured)
+ * @returns {boolean}
+ */
+function isMockMode() {
+  const key = process.env.FLW_SECRET_KEY;
+  if (!key) return true;
+  return key.toLowerCase().includes('mock') || key.toLowerCase().includes('dummy') || key.toLowerCase().includes('test');
+}
+
+/**
  * Get the Flutterwave secret key from env.
  * @returns {string}
  */
@@ -121,6 +131,21 @@ let banksCacheTime = 0;
 const BANKS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
 export async function listBanks(country = 'NG') {
+  if (isMockMode()) {
+    return [
+      { id: 1, code: '044', name: 'Access Bank' },
+      { id: 2, code: '058', name: 'Guaranty Trust Bank (GTB)' },
+      { id: 3, code: '011', name: 'First Bank of Nigeria' },
+      { id: 4, code: '057', name: 'Zenith Bank' },
+      { id: 5, code: '033', name: 'United Bank for Africa (UBA)' },
+      { id: 6, code: '050', name: 'Ecobank' },
+      { id: 7, code: '070', name: 'Fidelity Bank' },
+      { id: 8, code: '215', name: 'Unity Bank' },
+      { id: 9, code: '232', name: 'Sterling Bank' },
+      { id: 10, code: '035', name: 'Wema Bank' }
+    ];
+  }
+
   // Return cache if fresh
   if (banksCache && Date.now() - banksCacheTime < BANKS_CACHE_TTL) {
     return banksCache;
@@ -150,6 +175,26 @@ export async function resolveAccount(accountNumber, accountBank) {
   }
   if (!/^\d{10}$/.test(accountNumber)) {
     throw new Error('account_number must be exactly 10 digits');
+  }
+
+  if (isMockMode()) {
+    const banks = [
+      { id: 1, code: '044', name: 'Access Bank' },
+      { id: 2, code: '058', name: 'Guaranty Trust Bank (GTB)' },
+      { id: 3, code: '011', name: 'First Bank of Nigeria' },
+      { id: 4, code: '057', name: 'Zenith Bank' },
+      { id: 5, code: '033', name: 'United Bank for Africa (UBA)' },
+      { id: 6, code: '050', name: 'Ecobank' },
+      { id: 7, code: '070', name: 'Fidelity Bank' },
+      { id: 8, code: '215', name: 'Unity Bank' },
+      { id: 9, code: '232', name: 'Sterling Bank' },
+      { id: 10, code: '035', name: 'Wema Bank' }
+    ];
+    const bank = banks.find(b => b.code === accountBank) || { name: 'Mock Bank' };
+    return {
+      account_number: accountNumber,
+      account_name: `JOHN DOE (${bank.name.toUpperCase()} MOCK)`,
+    };
   }
 
   const res = await flwRequest('/accounts/resolve', {
@@ -188,6 +233,25 @@ export async function resolveAccount(accountNumber, accountBank) {
 export async function createTransfer(params) {
   if (!params.account_bank || !params.account_number || !params.amount || !params.reference) {
     throw new Error('account_bank, account_number, amount, and reference are required');
+  }
+
+  if (isMockMode()) {
+    const banks = [
+      { id: 1, code: '044', name: 'Access Bank' },
+      { id: 2, code: '058', name: 'Guaranty Trust Bank (GTB)' },
+      { id: 3, code: '011', name: 'First Bank of Nigeria' },
+      { id: 4, code: '057', name: 'Zenith Bank' },
+      { id: 5, code: '033', name: 'United Bank for Africa (UBA)' }
+    ];
+    const bank = banks.find(b => b.code === params.account_bank) || { name: 'Mock Bank' };
+    return {
+      id: Math.floor(100000 + Math.random() * 900000),
+      status: 'SUCCESSFUL',
+      reference: params.reference,
+      fee: 10,
+      amount: params.amount,
+      bank_name: bank.name,
+    };
   }
 
   const body = {
@@ -231,6 +295,21 @@ export async function createTransfer(params) {
  */
 export async function getTransferStatus(transferId) {
   if (!transferId) throw new Error('transferId is required');
+
+  if (isMockMode()) {
+    return {
+      id: transferId,
+      status: 'SUCCESSFUL',
+      reference: `mock-ref-${transferId}`,
+      amount: 1000,
+      fee: 10,
+      bank_name: 'Mock Bank',
+      account_number: '1234567890',
+      full_name: 'JOHN DOE (MOCK)',
+      complete_message: 'Transfer completed successfully (mock)',
+      created_at: new Date().toISOString(),
+    };
+  }
 
   const res = await flwRequest(`/transfers/${transferId}`);
 
@@ -276,6 +355,18 @@ export async function purchaseAirtime(params) {
     phone = '+' + phone;
   } else if (!phone.startsWith('+')) {
     phone = '+234' + phone;
+  }
+
+  if (isMockMode()) {
+    return {
+      status: 'success',
+      flw_ref: `mock-flw-ref-${Math.floor(Math.random() * 1000000)}`,
+      tx_ref: params.reference,
+      network: 'MTN',
+      phone_number: phone,
+      amount: params.amount,
+      reference: params.reference,
+    };
   }
 
   const body = {

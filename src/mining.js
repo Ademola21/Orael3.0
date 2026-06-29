@@ -6,7 +6,7 @@
 import { api } from './api.js';
 import { playAd } from './ads.js';
 import { getState, updateState } from './state.js';
-import { $, render, toast, reward, fmt, fmtInt, tankOrl, rigsList } from './ui.js';
+import { $, render, toast, reward, fmt, fmtInt, TANK_ORL, RIGS } from './ui.js';
 import { launchConfetti } from './animations.js';
 
 /**
@@ -48,7 +48,7 @@ export function setupMining() {
     boostBtn.addEventListener('click', () => {
       const S = getState();
       const isBoosted = Date.now() < (S.boostUntil || 0);
-      const mining = (S.tankMined || 0) < tankOrl() - 1e-9;
+      const mining = (S.tankMined || 0) < TANK_ORL - 1e-9;
       if (isBoosted || !mining) return;
 
       playAd('Loading boost…', '1.2× mining speed for 3 hours.', 15, async () => {
@@ -66,7 +66,7 @@ export function setupMining() {
   if (rigBtn) {
     rigBtn.addEventListener('click', async () => {
       const S = getState();
-      const rigs = rigsList();
+      const rigs = S.rigs && S.rigs.length ? S.rigs : RIGS;
       const next = rigs[S.rigLevel + 1];
       if (!next || S.balance < next.cost) return;
 
@@ -79,7 +79,7 @@ export function setupMining() {
         reward(
           0,
           `${newRig.name} online`,
-          `Now mining ${fmt(tankOrl() / (newRig.sessionMin / 60), 1)} ORL/hr — faster sessions.`
+          `Now mining ${fmt(TANK_ORL / (newRig.sessionMin / 60), 1)} ORL/hr — faster sessions.`
         );
       } catch (e) { /* handled */ }
     });

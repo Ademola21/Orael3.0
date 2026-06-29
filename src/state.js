@@ -39,6 +39,7 @@ let S = {
   tutorialSeen: false,
   role: 'user',
   permissions: '',
+  flwConfigured: false,
   firstName: '',
 
   // Referral stats
@@ -121,7 +122,7 @@ export function updateState(serverResponse) {
         'balance', 'tier', 'rigLevel', 'tankMined', 'lastAccrue',
         'boostUntil', 'proUntil', 'faucetLast', 'streakDay',
         'spinFreeUsed', 'scratchLeft', 'chestProgress', 'lottoTickets',
-        'ref', 'refCode', 'rig'
+        'ref', 'refCode', 'rig', 'tutorialSeen'
       ];
       for (const key of keysToCache) {
         if (S[key] !== undefined) {

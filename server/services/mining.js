@@ -1,7 +1,6 @@
-import { updateUser, addTransaction, getUserById, run } from '../db.js';
-import { getEconomyConfig } from '../settings.js';
+import { TANK_ORL, RIGS, getTierMultiplier, PRO_MULTIPLIER, BOOST_MULTIPLIER } from '../economy.js';
+import { updateUser, addTransaction, getUserById } from '../db.js';
 import { payReferralCommission } from './referral.js';
-import { isFeatureEnabled } from '../settings.js';
 
 /**
  * Accrue mined ORL for a user based on elapsed time, rig level, and active boosts.
@@ -11,12 +10,6 @@ import { isFeatureEnabled } from '../settings.js';
  */
 export async function accrueMinedORL(user) {
   const now = Date.now();
-  const E = getEconomyConfig();
-  const TANK_ORL = E.TANK_ORL;
-  const RIGS = E.RIGS;
-
-  // If mining is globally disabled (maintenance), pause accrual.
-  if (!isFeatureEnabled('mining_enabled')) return 0;
 
   // Initialize accrual timestamp if missing
   if (!user.last_accrue_at) {
@@ -37,8 +30,8 @@ export async function accrueMinedORL(user) {
 
   const isPro = user.pro_until > now;
   const isBoosted = user.boost_until > now;
-  const tierMul = (E.TIER_MULTIPLIERS && E.TIER_MULTIPLIERS[user.tier]) || 1;
-  const multiplier = (isPro ? E.PRO_MULTIPLIER : 1) * (isBoosted ? E.BOOST_MULTIPLIER : 1) * tierMul;
+  const tierMul = getTierMultiplier(user.tier);
+  const multiplier = (isPro ? PRO_MULTIPLIER : 1) * (isBoosted ? BOOST_MULTIPLIER : 1) * tierMul;
 
   const effectiveRate = baseRate * multiplier;
 
@@ -47,31 +40,17 @@ export async function accrueMinedORL(user) {
   mined = Math.round(mined * 1e6) / 1e6; // 6 decimal places
 
   if (mined > 0) {
-    // SCALABILITY: Use a single atomic UPDATE that increments balance + tank_mined
-    // and sets last_accrue_at in one query (was 3 separate field writes). This
-    // halves the write load at scale.
-    run(
-      'UPDATE users SET balance = balance + ?, tank_mined = tank_mined + ?, last_accrue_at = ? WHERE id = ?',
-      [mined, mined, now, user.id]
-    );
+    await updateUser(user.id, {
+      balance: user.balance + mined,
+      tank_mined: user.tank_mined + mined,
+      last_accrue_at: now,
+    });
 
-    // SCALABILITY: Only log a transaction row when the mined amount is
-    // meaningful (> 0.001 ORL). At 1M users polling every 30s, logging every
-    // micro-accrual would insert ~33k rows/sec into the transactions table —
-    // billions of rows over time. Sub-threshold amounts are still credited to
-    // the balance (above) but don't get their own transaction log row.
-    if (mined >= 0.001) {
-      addTransaction(user.id, 'mining', mined, `Mined ${mined.toFixed(6)} ORL`);
-    }
+    await addTransaction(user.id, 'mining', mined, `Mined ${mined} ORL`);
 
     if (user.referred_by) {
       await payReferralCommission(user.id, mined);
     }
-
-    // Update the in-memory user object so the caller sees the new values.
-    user.balance = (user.balance || 0) + mined;
-    user.tank_mined = (user.tank_mined || 0) + mined;
-    user.last_accrue_at = now;
   }
 
   return mined;

@@ -29,13 +29,35 @@
 export const ORL_TO_NGN = 0.02;
 
 /** USD → NGN exchange rate */
-export const USD_TO_NGN = 1500;
+export let USD_TO_NGN = 1350;
 
 /** ORL per USD (derived from peg) */
-export const ORL_PER_USD = 75000;
+export let ORL_PER_USD = Math.round(USD_TO_NGN / ORL_TO_NGN);
+
+/** Fetch live exchange rate from open.er-api.com */
+export async function fetchExchangeRate() {
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/USD');
+    const data = await res.json();
+    if (data && data.result === 'success' && data.rates && data.rates.NGN) {
+      const rate = data.rates.NGN;
+      if (rate >= 1000 && rate <= 2200) {
+        USD_TO_NGN = Math.round(rate);
+        ORL_PER_USD = Math.round(USD_TO_NGN / ORL_TO_NGN);
+        console.log(`[economy] Updated exchange rate: $1 = ₦${USD_TO_NGN} (ORL per USD = ${ORL_PER_USD})`);
+      } else {
+        console.warn(`[economy] Fetched exchange rate out of sanity bounds: ${rate}`);
+      }
+    } else {
+      console.warn('[economy] Failed to parse exchange rate data:', data);
+    }
+  } catch (err) {
+    console.error('[economy] Error fetching exchange rate:', err.message);
+  }
+}
 
 /** ORL earned per full tank session (one refuel ad = one tank) */
-export const TANK_ORL = 40;
+export const TANK_ORL = 100;
 
 /**
  * Pre-ad mining cap: user can only mine this % of tank before forced refuel.
@@ -59,60 +81,55 @@ export const RIGS = [
 ];
 
 // ── Faucet ──────────────────────────────────────────────────
-//  1 ad → 35 ORL = 20.8% payout ratio ✅
+//  1 ad → 80 ORL
 export const FAUCET_COOLDOWN = 60 * 60 * 1000;   // 1 hour in ms
-export const FAUCET_REWARD   = 35;                // ORL per claim
+export const FAUCET_REWARD   = 80;                // ORL per claim
 
 // ── Lottery ─────────────────────────────────────────────────
 //  ORL sink — removes coins from circulation, self-funds the prize pool.
 export const LOTTO_TICKET_ORL = 750;
 
 // ── Chest mini-game ─────────────────────────────────────────
-//  5 ads to unlock → 200-280 ORL payout.
-//  Per-ad cost = (240 avg) / 5 = 48 ORL = 28.6% payout ratio ✅
+//  5 ads to unlock → 450-550 ORL payout.
 //  NO daily limit — users can fill chests unlimited (each requires 5 ads)
 export const CHEST_GOAL       = 5;    // ads needed to unlock reward
-export const CHEST_REWARD_MIN = 200;
-export const CHEST_REWARD_MAX = 280;
+export const CHEST_REWARD_MIN = 450;
+export const CHEST_REWARD_MAX = 550;
 
 // ── Spin-the-wheel ──────────────────────────────────────────
-//  EV = 40.3 ORL per spin = 24.0% payout ratio ✅
 //  NO daily limit — each spin requires 1 ad
-export const WHEEL_PRIZES  = [120, 60, 300, 0, 40, 20, 600, 8];
+export const WHEEL_PRIZES  = [300, 150, 750, 0, 100, 50, 1500, 20];
 export const WHEEL_WEIGHTS = [10, 16, 1, 20, 14, 20, 0.3, 18.7];
 
 // ── Scratch card ────────────────────────────────────────────
-//  EV = 29.8 ORL per scratch = 17.7% payout ratio ✅
 //  NO daily limit — each scratch requires 1 ad
-export const SCRATCH_PRIZES  = [8, 20, 40, 100, 250, 0];
+export const SCRATCH_PRIZES  = [20, 50, 100, 250, 600, 0];
 export const SCRATCH_WEIGHTS = [38, 28, 20, 10, 1, 3];
 
 // ── Coin Flip (NEW game) ────────────────────────────────────
 //  Watch 1 ad, pick heads or tails.
-//  Win: 65 ORL | Lose: 15 ORL consolation
-//  EV = (0.5 × 65) + (0.5 × 15) = 40 ORL = 23.8% payout ratio ✅
+//  Win: 160 ORL | Lose: 40 ORL consolation
+//  EV = (0.5 * 160) + (0.5 * 40) = 100 ORL
 //  NO daily limit — unlimited flips, each requires 1 ad
-export const COINFLIP_WIN  = 65;
-export const COINFLIP_LOSE = 15;
+export const COINFLIP_WIN  = 160;
+export const COINFLIP_LOSE = 40;
 
 // ── Video Wall (unlimited watch & earn) ─────────────────────
-//  Each video ad watched → 40 ORL = 23.8% payout ratio ✅
+//  Each video ad watched → 100 ORL
 //  NO daily limit — users watch as many as they want
-export const VIDEO_WALL_REWARD = 40;
+export const VIDEO_WALL_REWARD = 100;
 
 // ── Daily Ad Challenge (milestone bonuses) ──────────────────
 //  Milestone bonuses credited automatically when ad count is reached.
 //  One-time per day per milestone. Resets at midnight.
 export const AD_MILESTONES = [
-  { ads: 10, bonus: 70 },
-  { ads: 25, bonus: 140 },
-  { ads: 50, bonus: 350 },
+  { ads: 10, bonus: 150 },
+  { ads: 25, bonus: 300 },
+  { ads: 50, bonus: 800 },
 ];
 
 // ── Daily login streak ──────────────────────────────────────
-//  7-day total = 1,950 ORL
-//  Amortized across ~35 ads/week per active user = 24% payout ratio ✅
-export const STREAK_AMOUNTS = [60, 90, 140, 210, 290, 390, 770];
+export const STREAK_AMOUNTS = [150, 220, 350, 500, 700, 950, 1850];
 
 // ── Session duration ────────────────────────────────────────
 export const SESSION_MS = 4 * 60 * 60 * 1000; // 4 hours in ms (boost duration)
@@ -123,17 +140,17 @@ export const SESSION_MS = 4 * 60 * 60 * 1000; // 4 hours in ms (boost duration)
 export const REFERRAL_L1_PCT = 0.07; // 7% of referee earnings
 export const REFERRAL_L2_PCT = 0.02; // 2% second-level
 
-// ── Earn tasks (1 ad per task → 40 ORL = 23.8% payout ratio ✅) ──
+// ── Earn tasks ──
 export const TASKS = [
-  { id: 't1', title: 'Watch a sponsored video', sub: '15s · rewarded ad', reward: 40, url: '' },
-  { id: 't2', title: 'Visit partner offer',     sub: 'Open link · 10s',  reward: 35, url: '' },
-  { id: 't3', title: 'Daily quiz',              sub: 'Answer 1 question', reward: 35, url: '' },
+  { id: 't1', title: 'Watch a sponsored video', sub: '15s · rewarded ad', reward: 100, url: '' },
+  { id: 't2', title: 'Visit partner offer',     sub: 'Open link · 10s',  reward: 80, url: '' },
+  { id: 't3', title: 'Daily quiz',              sub: 'Answer 1 question', reward: 80, url: '' },
 ];
 
 export const FEATURED_TASKS = [
-  { id: 'f1', title: 'Join Orael Bot',          sub: 'Open & start the bot', reward: 40, url: 'https://t.me/Orael_bot' },
-  { id: 'f2', title: 'Follow Orael on X',        sub: 'Tap follow',           reward: 40, url: 'https://x.com/Orael_Network' },
-  { id: 'f3', title: 'Subscribe Orael channel',  sub: 'Telegram',             reward: 40, url: 'https://t.me/Orael_Channel' },
+  { id: 'f1', title: 'Join Orael Bot',          sub: 'Open & start the bot', reward: 100, url: 'https://t.me/Orael_bot' },
+  { id: 'f2', title: 'Follow Orael on X',        sub: 'Tap follow',           reward: 100, url: 'https://x.com/Orael_Network' },
+  { id: 'f3', title: 'Subscribe Orael channel',  sub: 'Telegram',             reward: 100, url: 'https://t.me/Orael_Channel' },
 ];
 
 // ── Tier Multipliers ────────────────────────────────────────
@@ -180,67 +197,23 @@ export const MANUAL_APPROVAL_THRESHOLD_ORL = 100000; // 100k ORL ≈ ₦2,000
 export const WITHDRAWAL_METHODS = {
   airtime: {
     name: 'Airtime',
-    minOrl: 30000,
-    fiat: '₦600',
+    minOrl: 15000,
+    fiat: '₦300',
     countries: ['NG'],
     icon: 'phone'
   },
   bank: {
     name: 'Bank (NGN)',
-    minOrl: 75000,
-    fiat: '₦1,500',
+    minOrl: 50000,
+    fiat: '₦1,000',
     countries: ['NG'],
     icon: 'bank'
   },
   usdt: {
     name: 'USDT (TRC20)',
-    minOrl: 150000,
-    fiat: '$2.00',
+    minOrl: 75000,
+    fiat: '$1.00',
     countries: 'all',
     icon: 'crypto'
   },
-};
-
-/**
- * Full client-facing economy config. Sent to the client in `getUserState` so the
- * frontend uses SERVER-AUTHORITATIVE values instead of stale hardcoded copies
- * (the old client had TANK_ORL=30 / ORL_TO_NGN=0.03 / 8% referral while the
- * server used 40 / 0.02 / 7% — displays drifted and fiat conversions were wrong).
- */
-export const ECONOMY_CONFIG = {
-  ORL_TO_NGN,
-  USD_TO_NGN,
-  ORL_PER_USD,
-  TANK_ORL,
-  FREE_MINING_CAP,
-  RIGS,
-  FAUCET_REWARD,
-  FAUCET_COOLDOWN,
-  LOTTO_TICKET_ORL,
-  CHEST_GOAL,
-  CHEST_REWARD_MIN,
-  CHEST_REWARD_MAX,
-  WHEEL_PRIZES,
-  WHEEL_WEIGHTS,
-  SCRATCH_PRIZES,
-  SCRATCH_WEIGHTS,
-  COINFLIP_WIN,
-  COINFLIP_LOSE,
-  VIDEO_WALL_REWARD,
-  AD_MILESTONES,
-  STREAK_AMOUNTS,
-  SESSION_MS,
-  REFERRAL_L1_PCT,
-  REFERRAL_L2_PCT,
-  PRO_MULTIPLIER,
-  BOOST_MULTIPLIER,
-  TIER_MULTIPLIERS,
-  WITHDRAWAL_FEE_PCT,
-  WITHDRAWAL_FEE_PRO_PCT,
-  MANUAL_APPROVAL_THRESHOLD_ORL,
-  WITHDRAWAL_METHODS,
-  TASKS,
-  FEATURED_TASKS,
-  PRO_PRICE_STARS: 250,
-  PRO_DURATION_DAYS: 30,
 };

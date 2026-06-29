@@ -10,31 +10,20 @@ import { getState, setLocal } from './state.js';
 import { haptic } from './telegram.js';
 import { ARC_LEN } from './ads.js';
 
-/* ---- Economy config (server-authoritative) ----
-   The server sends the full economy config in `state.economy` (see
-   getUserState). These getters read it live so displays NEVER drift from the
-   server's actual values. The old hardcoded ORL_TO_NGN=0.03 / TANK_ORL=30 /
-   RIGS costs were stale (server uses 0.02 / 40 / higher costs). */
-function econ() { return getState().economy || {}; }
-export function orlToNgn() { return econ().ORL_TO_NGN ?? 0.02; }
-export function tankOrl()  { return econ().TANK_ORL ?? 40; }
-export function rigsList() { return econ().RIGS && econ().RIGS.length ? econ().RIGS : RIGS_FALLBACK; }
-export function tierMul(t) { const m = econ().TIER_MULTIPLIERS; return (m && m[t]) || (TIER_MUL_FALLBACK[t] || 1); }
-export function proMul()   { return econ().PRO_MULTIPLIER ?? 2; }
-export function boostMul() { return econ().BOOST_MULTIPLIER ?? 1.2; }
+/* ---- Economy constants (display only) ---- */
+export const ORL_TO_NGN = 0.02;
+export const TANK_ORL   = 100;
+const FAUCET_COOLDOWN   = 60 * 60 * 1000;  // 1 hour in ms
+const CHEST_GOAL        = 5;
 
-// Fallbacks (only used before the first server sync lands)
-const RIGS_FALLBACK = [
+/* ---- Rig definitions (used for client-side display calculations) ---- */
+export const RIGS = [
   { name: 'Rig I',   sessionMin: 240, cost: 0 },
   { name: 'Rig II',  sessionMin: 200, cost: 8000 },
   { name: 'Rig III', sessionMin: 160, cost: 30000 },
   { name: 'Rig IV',  sessionMin: 120, cost: 90000 },
   { name: 'Rig V',   sessionMin: 80,  cost: 250000 },
 ];
-const TIER_MUL_FALLBACK = { 1: 1.0, 2: 1.1, 3: 1.25, 4: 1.5, 5: 2.0 };
-
-const FAUCET_COOLDOWN   = 60 * 60 * 1000;  // 1 hour in ms
-const CHEST_GOAL        = 5;
 
 /* ---- Format helpers ---- */
 
@@ -66,7 +55,9 @@ export function fmtInt(n) {
  * @returns {string}
  */
 export function naira(orl) {
-  return '₦' + fmt(orl * orlToNgn(), 2);
+  const S = getState();
+  const rate = S.orlToNgn || ORL_TO_NGN;
+  return '₦' + fmt(orl * rate, 2);
 }
 
 /**
@@ -99,42 +90,49 @@ const icoOut = `<svg viewBox="0 0 24 24" fill="none"><path d="M12 19V5m0 0 5 5m-
 
 function now() { return Date.now(); }
 
-const TIER_MULTIPLIERS = { 1: 1.0, 2: 1.1, 3: 1.25, 4: 1.5, 5: 2.0 };
+const TIER_MULTIPLIERS = {
+  1: 1.0,
+  2: 1.1,
+  3: 1.25,
+  4: 1.5,
+  5: 2.0
+};
 
 function isPro(S) { return now() < (S.proUntil || 0); }
 function isBoosted(S) { return now() < (S.boostUntil || 0); }
 function multiplier(S) {
-  const proMulV = isPro(S) ? proMul() : 1;
-  const boostMulV = isBoosted(S) ? boostMul() : 1;
-  const tierMulV = tierMul(S.tier || 1);
-  return proMulV * boostMulV * tierMulV;
+  const proMul = isPro(S) ? 2 : 1;
+  const boostMul = isBoosted(S) ? 1.2 : 1;
+  const tierMul = TIER_MULTIPLIERS[S.tier || 1] || 1.0;
+  return proMul * boostMul * tierMul;
 }
 
 function rigDef(S) {
-  const rigs = rigsList();
+  // Use server-provided rigs array if available, else local fallback
+  const rigs = S.rigs && S.rigs.length ? S.rigs : RIGS;
   return rigs[S.rigLevel] || rigs[0];
 }
 
 function sessionHrs(S) {
   const r = rigDef(S);
-  return (r.sessionMin || 240) / 60;
+  return (r.sessionMin || 180) / 60;
 }
 
 function ratePerHr(S) {
-  return (tankOrl() / sessionHrs(S)) * multiplier(S);
+  return (TANK_ORL / sessionHrs(S)) * multiplier(S);
 }
 
 function energyPct(S) {
-  return Math.max(0, (tankOrl() - (S.tankMined || 0)) / tankOrl() * 100);
+  return Math.max(0, (TANK_ORL - (S.tankMined || 0)) / TANK_ORL * 100);
 }
 
 function isMining(S) {
-  return (S.tankMined || 0) < tankOrl() - 1e-9;
+  return (S.tankMined || 0) < TANK_ORL - 1e-9;
 }
 
 function fuelMsLeft(S) {
   if (!isMining(S)) return 0;
-  return ((tankOrl() - (S.tankMined || 0)) / ratePerHr(S)) * 3600000;
+  return ((TANK_ORL - (S.tankMined || 0)) / ratePerHr(S)) * 3600000;
 }
 
 /**
@@ -147,7 +145,7 @@ function estimateMining(S) {
   const elapsed = now() - (S.lastAccrue || now());
   if (elapsed <= 0) return 0;
   const est = (elapsed / 3600000) * ratePerHr(S);
-  return Math.min(est, tankOrl() - (S.tankMined || 0));
+  return Math.min(est, TANK_ORL - (S.tankMined || 0));
 }
 
 /* ========================================================================
@@ -312,37 +310,15 @@ export function setupModal() {
 }
 
 /**
- * Wire the topbar user-chip to open the PROFILE overlay (which now houses
- * avatar, Pro subscription, and a link to the tier-progression modal).
+ * Open the tier modal and show current requirements and progress.
  */
 export function setupTierModal() {
   const userChip = $('userChip');
   const tierClose = $('tierClose');
   const tierVeil = $('tierVeil');
-  const profileVeil = $('profileVeil');
-  const profileClose = $('profileClose');
-  const viewTiersBtn = $('profileViewTiers');
 
-  // Tap avatar → open profile overlay
-  if (userChip && profileVeil) {
+  if (userChip && tierVeil) {
     userChip.addEventListener('click', () => {
-      const S = getState();
-      renderProfile(S);
-      profileVeil.classList.add('show');
-      haptic('light');
-    });
-  }
-
-  if (profileClose && profileVeil) {
-    profileClose.addEventListener('click', () => {
-      profileVeil.classList.remove('show');
-      haptic('light');
-    });
-  }
-
-  // Profile → open tier progression modal
-  if (viewTiersBtn && tierVeil) {
-    viewTiersBtn.addEventListener('click', () => {
       const S = getState();
       updateTierModalProgress(S);
       tierVeil.classList.add('show');
@@ -501,7 +477,7 @@ export function renderHistory(transactions) {
  */
 export function renderRig(state) {
   const S = state || getState();
-  const rigs = rigsList();
+  const rigs = S.rigs && S.rigs.length ? S.rigs : RIGS;
   const r = rigs[S.rigLevel] || rigs[0];
   const next = rigs[S.rigLevel + 1];
 
@@ -512,7 +488,7 @@ export function renderRig(state) {
   const rigBtnEl = $('rigBtn');
 
   if (rigNameEl) rigNameEl.textContent = r.name;
-  if (rigRateEl) rigRateEl.textContent = fmt(tankOrl() / (r.sessionMin / 60), 1);
+  if (rigRateEl) rigRateEl.textContent = fmt(TANK_ORL / (r.sessionMin / 60), 1);
 
   if (rigMeterEl) {
     rigMeterEl.innerHTML = rigs.map((_, i) =>
@@ -521,7 +497,7 @@ export function renderRig(state) {
   }
 
   if (next) {
-    if (rigNextEl) rigNextEl.textContent = fmt(tankOrl() / (next.sessionMin / 60), 1);
+    if (rigNextEl) rigNextEl.textContent = fmt(TANK_ORL / (next.sessionMin / 60), 1);
     if (rigBtnEl) {
       rigBtnEl.textContent = `Upgrade · ${fmtInt(next.cost)} ORL`;
       rigBtnEl.disabled = S.balance < next.cost;
@@ -579,12 +555,11 @@ export function render() {
 
   // Client-side estimation for smooth animation
   const estMined = estimateMining(S);
-  const tOrl = tankOrl();
-  const effectiveTankMined = Math.min(tOrl, (S.tankMined || 0) + estMined);
+  const effectiveTankMined = Math.min(TANK_ORL, (S.tankMined || 0) + estMined);
   const effectiveBalance = (S.balance || 0) + estMined;
 
-  const e = Math.max(0, (tOrl - effectiveTankMined) / tOrl * 100);
-  const mining = effectiveTankMined < tOrl - 1e-9;
+  const e = Math.max(0, (TANK_ORL - effectiveTankMined) / TANK_ORL * 100);
+  const mining = effectiveTankMined < TANK_ORL - 1e-9;
 
   // Pro status class
   document.body.classList.toggle('is-pro', isPro(S));
@@ -598,19 +573,17 @@ export function render() {
   if (tierEl) tierEl.textContent = S.tier || 1;
   updateTierModalProgress(S);
 
-  // Update avatar — prefer the server-assigned avatar_url (custom upload or one
-  // of the 10 defaults), then Telegram photo_url, then initial. Re-renders on
-  // change (avatar picker / upload) — no dataset guard.
-  const userAv = $('userAv');
-  if (userAv) {
-    const avUrl = S.avatarUrl || S.photoUrl || null;
-    const initial = (S.firstName || 'A')[0]?.toUpperCase() || 'A';
-    if (avUrl && avUrl !== userAv.dataset.src) {
-      userAv.innerHTML = `<img src="${avUrl}" alt="avatar" onerror="this.parentElement.textContent='${initial}'" />`;
-      userAv.dataset.src = avUrl;
-    } else if (!avUrl && userAv.dataset.src !== 'initial') {
-      userAv.textContent = initial;
-      userAv.dataset.src = 'initial';
+  // Update avatar with photo_url if available
+  if (S.photoUrl) {
+    const userAv = $('userAv');
+    if (userAv && !userAv.dataset.loaded) {
+      userAv.innerHTML = `<img src="${S.photoUrl}" alt="avatar" onerror="this.parentElement.textContent='${(S.firstName || 'A')[0].toUpperCase()}'" />`;
+      userAv.dataset.loaded = '1';
+    }
+  } else if (S.firstName) {
+    const userAv = $('userAv');
+    if (userAv && !userAv.dataset.loaded) {
+      userAv.textContent = (S.firstName[0] || 'A').toUpperCase();
     }
   }
 
@@ -624,7 +597,7 @@ export function render() {
     if (isNG) {
       fiatEl.textContent = naira(effectiveBalance);
     } else {
-      fiatEl.textContent = '≈ $' + fmt(effectiveBalance / (econ().ORL_PER_USD || 75000), 2);
+      fiatEl.textContent = '≈ $' + fmt(effectiveBalance / 50000, 2);
     }
   }
 
@@ -651,7 +624,7 @@ export function render() {
   const timeEl = $('timeLeft');
   if (timeEl) {
     const remaining = mining
-      ? ((tOrl - effectiveTankMined) / ratePerHr(S)) * 3600000
+      ? ((TANK_ORL - effectiveTankMined) / ratePerHr(S)) * 3600000
       : 0;
     timeEl.textContent = hms(remaining);
   }
@@ -700,16 +673,17 @@ export function render() {
   // Rig
   renderRig(S);
 
-  // Show/Hide withdrawal methods based on country
+  // Show/Hide withdrawal methods based on country & Flutterwave config
   const isNG = !S.country || S.country === 'NG';
+  const showNG = isNG && S.flwConfigured;
   const methodAirtimeEl = $('method-airtime');
   const methodBankEl = $('method-bank');
-  if (methodAirtimeEl) methodAirtimeEl.style.display = isNG ? '' : 'none';
-  if (methodBankEl) methodBankEl.style.display = isNG ? '' : 'none';
+  if (methodAirtimeEl) methodAirtimeEl.style.display = showNG ? '' : 'none';
+  if (methodBankEl) methodBankEl.style.display = showNG ? '' : 'none';
 
-  // Force selection to USDT if user is not in Nigeria and an NG-only method is selected
-  if (!isNG && S._selectedMethod && (S._selectedMethod.id === 'airtime' || S._selectedMethod.id === 'bank')) {
-    setLocal('_selectedMethod', { id: 'usdt', name: 'USDT (TRC20)', min: 100000 });
+  // Force selection to USDT if user cannot use NG-only methods
+  if (!showNG && S._selectedMethod && (S._selectedMethod.id === 'airtime' || S._selectedMethod.id === 'bank')) {
+    setLocal('_selectedMethod', { id: 'usdt', name: 'USDT (TRC20)', min: 75000 });
     const usdtEl = $('method-usdt');
     if (usdtEl) {
       document.querySelectorAll('.method').forEach(x => x.classList.remove('sel'));
@@ -738,9 +712,11 @@ export function render() {
   const wFiatEl = $('wFiat');
   if (wFiatEl) {
     if (isNG) {
-      wFiatEl.textContent = '₦' + fmt(effectiveBalance * orlToNgn(), 2);
+      const rate = S.orlToNgn || ORL_TO_NGN;
+      wFiatEl.textContent = '₦' + fmt(effectiveBalance * rate, 2);
     } else {
-      wFiatEl.textContent = '$' + fmt(effectiveBalance / (econ().ORL_PER_USD || 75000), 2);
+      const usdRate = S.orlPerUsd || 75000;
+      wFiatEl.textContent = '$' + fmt(effectiveBalance / usdRate, 2);
     }
   }
 
@@ -776,7 +752,7 @@ export function render() {
   const feeNetEl = $('feeNet');
   if (feeNetEl) {
     if (selectedKey === 'usdt') {
-      const usdVal = (amt - fee) / (econ().ORL_PER_USD || 75000);
+      const usdVal = (amt - fee) / 50000;
       feeNetEl.textContent = '$' + fmt(usdVal, 2) + ' USDT';
     } else {
       feeNetEl.textContent = naira(amt - fee);
@@ -786,17 +762,15 @@ export function render() {
   // Pro button state update
   const proBtnEl = $('proBtn');
   if (proBtnEl) {
-    const stars = econ().PRO_PRICE_STARS || 250;
     if (isPro(S)) {
       proBtnEl.disabled = true;
-      const daysLeft = Math.max(0, Math.ceil((S.proUntil - now()) / 86400000));
-      proBtnEl.innerHTML = `Pro active · ${daysLeft}d left`;
-      proBtnEl.style.opacity = '0.7';
+      proBtnEl.innerHTML = 'Orael Pro Active';
+      proBtnEl.style.opacity = '0.6';
     } else {
       proBtnEl.disabled = false;
       proBtnEl.innerHTML = `
         <svg class="stars-ico" viewBox="0 0 24 24" fill="#1c1109"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2z"/></svg>
-        Go Pro · ${stars} Telegram Stars / mo
+        Go Pro · 250 Telegram Stars / mo
       `;
       proBtnEl.style.opacity = '1';
     }
@@ -849,6 +823,7 @@ export function render() {
   const refActiveEl = $('refActive');
   if (refActiveEl) refActiveEl.textContent = S.ref?.active || 0;
 
+  // Referral code
   const refCodeEl = $('refCode');
   if (refCodeEl && S.refCode) {
     refCodeEl.textContent = `https://t.me/Orael_bot?start=${S.refCode}`;
@@ -869,50 +844,5 @@ export function render() {
         <div class="ac-m-status">${m.claimed ? '✓ Claimed' : 'Locked'}</div>
       </div>`;
     }).join('');
-  }
-
-  // Profile overlay fields (avatar, name, tier, pro status)
-  renderProfile(S);
-}
-
-/* ========================================================================
-   PROFILE OVERLAY RENDER
-   ======================================================================== */
-function renderProfile(S) {
-  const veil = $('profileVeil');
-  if (!veil) return;
-
-  // Big avatar
-  const bigAv = $('profileAvatar');
-  if (bigAv) {
-    const avUrl = S.avatarUrl || S.photoUrl || null;
-    const initial = (S.firstName || 'A')[0]?.toUpperCase() || 'A';
-    if (avUrl && avUrl !== bigAv.dataset.src) {
-      bigAv.innerHTML = `<img src="${avUrl}" alt="avatar" onerror="this.parentElement.textContent='${initial}'" />`;
-      bigAv.dataset.src = avUrl;
-    } else if (!avUrl && bigAv.dataset.src !== 'initial') {
-      bigAv.textContent = initial;
-      bigAv.dataset.src = 'initial';
-    }
-  }
-
-  const nameEl = $('profileName');
-  if (nameEl) nameEl.textContent = S.firstName ? `${S.firstName} ${S.lastName || ''}`.trim() : 'Orael Miner';
-
-  const userEl = $('profileUsername');
-  if (userEl) userEl.textContent = S.username ? '@' + S.username : '';
-
-  const tierEl = $('profileTier');
-  if (tierEl) tierEl.textContent = `Tier ${S.tier || 1}`;
-
-  const proBadgeEl = $('profileProBadge');
-  if (proBadgeEl) {
-    if (isPro(S)) {
-      const days = Math.max(0, Math.ceil((S.proUntil - now()) / 86400000));
-      proBadgeEl.style.display = '';
-      proBadgeEl.textContent = `PRO · ${days}d left`;
-    } else {
-      proBadgeEl.style.display = 'none';
-    }
   }
 }

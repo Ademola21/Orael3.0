@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import initSqlJs from 'sql.js';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -11,48 +11,24 @@ const DATA_DIR = path.resolve(PROJECT_ROOT, 'data');
 const DB_PATH = path.resolve(DATA_DIR, 'orael.db');
 
 let db = null;
-
-const AVATAR_COUNT = 10;
-function randomDefaultAvatar() {
-  const n = Math.floor(Math.random() * AVATAR_COUNT) + 1;
-  return `/avatars/avatar-${n}.png`;
-}
+let SQL = null;
 
 /**
- * Initialize the native SQLite database (better-sqlite3).
- *
- * Why better-sqlite3 instead of sql.js?
- *  - sql.js loads the ENTIRE database into a JS ArrayBuffer and re-exports the
- *    whole file on every write — at 1M users this blocks the event loop and
- *    caps throughput at ~hundreds of writes/sec.
- *  - better-sqlite3 is a native C++ binding to SQLite. Writes go directly to
- *    the file (incrementally, via WAL). Reads are concurrent with writes.
- *    Throughput is ~50,000+ writes/sec on commodity hardware.
- *  - WAL (Write-Ahead Logging) mode allows multiple readers simultaneously
- *    while a writer is writing — critical for high-concurrency APIs.
+ * Initialize the pure-JS SQLite database.
+ * Auto-creates tables and schemas. Must be called before server start.
  */
 export async function initDB() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  db = new Database(DB_PATH);
-
-  // ── Performance pragmas ──
-  // WAL mode: concurrent reads + single writer, much faster than default
-  //   rollback-journal mode. Readers never block writers.
-  db.pragma('journal_mode = WAL');
-  // NORMAL synchronous is safe with WAL (only loses last transaction on power
-  //   loss, not the whole DB) and ~10x faster than FULL.
-  db.pragma('synchronous = NORMAL');
-  // Enforce foreign keys (referential integrity).
-  db.pragma('foreign_keys = ON');
-  // Wait up to 5s if another writer holds the lock instead of throwing.
-  db.pragma('busy_timeout = 5000');
-  // Larger cache = fewer disk reads. 64MB.
-  db.pragma('cache_size = -65536');
-  // Store temporary tables in memory.
-  db.pragma('temp_store = MEMORY');
+  SQL = await initSqlJs();
+  if (fs.existsSync(DB_PATH)) {
+    const buffer = fs.readFileSync(DB_PATH);
+    db = new SQL.Database(buffer);
+  } else {
+    db = new SQL.Database();
+  }
 
   // Schema creation
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id              INTEGER PRIMARY KEY AUTOINCREMENT,
       telegram_id     INTEGER UNIQUE NOT NULL,
@@ -89,49 +65,42 @@ export async function initDB() {
   `);
 
   // Migration: Add country column if table already exists
-  try { db.exec("ALTER TABLE users ADD COLUMN country TEXT;"); } catch (e) {}
+  try {
+    db.run("ALTER TABLE users ADD COLUMN country TEXT;");
+  } catch (e) {
+    // Column already exists or table doesn't exist yet (handled silently)
+  }
 
   // Migration: Add banned column if table already exists
-  try { db.exec("ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0;"); } catch (e) {}
+  try {
+    db.run("ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0;");
+  } catch (e) {
+    // Column already exists or table doesn't exist yet (handled silently)
+  }
 
   // Migration: Add ad-tracking columns (Daily Ad Challenge)
-  try { db.exec("ALTER TABLE users ADD COLUMN ads_today_count INTEGER DEFAULT 0;"); } catch (e) {}
-  try { db.exec("ALTER TABLE users ADD COLUMN ads_today_date TEXT;"); } catch (e) {}
-  try { db.exec("ALTER TABLE users ADD COLUMN ad_milestones_claimed TEXT DEFAULT '';"); } catch (e) {}
+  try { db.run("ALTER TABLE users ADD COLUMN ads_today_count INTEGER DEFAULT 0;"); } catch (e) {}
+  try { db.run("ALTER TABLE users ADD COLUMN ads_today_date TEXT;"); } catch (e) {}
+  try { db.run("ALTER TABLE users ADD COLUMN ad_milestones_claimed TEXT DEFAULT '';"); } catch (e) {}
 
   // Migration: Add Pro free chest tracking
-  try { db.exec("ALTER TABLE users ADD COLUMN pro_chest_last INTEGER DEFAULT 0;"); } catch (e) {}
+  try { db.run("ALTER TABLE users ADD COLUMN pro_chest_last INTEGER DEFAULT 0;"); } catch (e) {}
 
   // Migration: Remove scratch daily limit — keep column for backwards compat but default high
-  try { db.exec("ALTER TABLE users ADD COLUMN scratch_reset_date TEXT;"); } catch (e) {}
+  try { db.run("ALTER TABLE users ADD COLUMN scratch_reset_date TEXT;"); } catch (e) {}
 
   // Migration: Add role + permissions + avatar columns
-  try { db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';"); } catch (e) {}
-  try { db.exec("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT '';"); } catch (e) {}
-  try { db.exec("ALTER TABLE users ADD COLUMN photo_url TEXT;"); } catch (e) {}
-  try { db.exec("ALTER TABLE users ADD COLUMN tutorial_seen INTEGER DEFAULT 0;"); } catch (e) {}
-  try { db.exec("ALTER TABLE users ADD COLUMN withdrawal_pin TEXT;"); } catch (e) {}
-  try { db.exec("ALTER TABLE users ADD COLUMN total_withdrawn REAL DEFAULT 0;"); } catch (e) {}
-  try { db.exec("ALTER TABLE users ADD COLUMN total_ads_watched INTEGER DEFAULT 0;"); } catch (e) {}
+  try { db.run("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';"); } catch (e) {}
+  try { db.run("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT '';"); } catch (e) {}
+  try { db.run("ALTER TABLE users ADD COLUMN photo_url TEXT;"); } catch (e) {}
+  try { db.run("ALTER TABLE users ADD COLUMN tutorial_seen INTEGER DEFAULT 0;"); } catch (e) {}
+  try { db.run("ALTER TABLE users ADD COLUMN withdrawal_pin TEXT;"); } catch (e) {}
+  try { db.run("ALTER TABLE users ADD COLUMN total_withdrawn REAL DEFAULT 0;"); } catch (e) {}
+  try { db.run("ALTER TABLE users ADD COLUMN total_ads_watched INTEGER DEFAULT 0;"); } catch (e) {}
 
-  // Migration: avatar_url — random default assigned at signup, or a custom
-  // uploaded image path. Defaults are served from /avatars/avatar-<n>.png.
-  try { db.exec("ALTER TABLE users ADD COLUMN avatar_url TEXT;"); } catch (e) {}
 
-  // Backfill: assign a random default avatar to users created before this
-  // column existed (avatar_url IS NULL). Idempotent.
-  try {
-    const needAvatar = getAll("SELECT id FROM users WHERE avatar_url IS NULL OR avatar_url = ''");
-    for (const u of needAvatar) {
-      const n = Math.floor(Math.random() * AVATAR_COUNT) + 1;
-      run('UPDATE users SET avatar_url = ? WHERE id = ?', [`/avatars/avatar-${n}.png`, u.id]);
-    }
-    if (needAvatar.length > 0) {
-      console.log(`[db] Backfilled ${needAvatar.length} user(s) with random default avatars.`);
-    }
-  } catch (e) { /* ignore */ }
 
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS transactions (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id     INTEGER NOT NULL,
@@ -143,7 +112,7 @@ export async function initDB() {
     );
   `);
 
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS completed_tasks (
       user_id      INTEGER NOT NULL,
       task_id      TEXT    NOT NULL,
@@ -152,7 +121,7 @@ export async function initDB() {
     );
   `);
 
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS lottery_pools (
       draw_date     TEXT PRIMARY KEY,
       total_pool    REAL    DEFAULT 0,
@@ -163,7 +132,7 @@ export async function initDB() {
     );
   `);
 
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS withdrawals (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id      INTEGER NOT NULL,
@@ -185,13 +154,13 @@ export async function initDB() {
   `);
 
   // Migration: add Flutterwave columns to existing withdrawals table
-  try { db.exec("ALTER TABLE withdrawals ADD COLUMN flw_transfer_id INTEGER;"); } catch (e) {}
-  try { db.exec("ALTER TABLE withdrawals ADD COLUMN flw_reference TEXT;"); } catch (e) {}
-  try { db.exec("ALTER TABLE withdrawals ADD COLUMN flw_status TEXT;"); } catch (e) {}
-  try { db.exec("ALTER TABLE withdrawals ADD COLUMN failure_reason TEXT;"); } catch (e) {}
-  try { db.exec("ALTER TABLE withdrawals ADD COLUMN net_fiat TEXT;"); } catch (e) {}
+  try { db.run("ALTER TABLE withdrawals ADD COLUMN flw_transfer_id INTEGER;"); } catch (e) {}
+  try { db.run("ALTER TABLE withdrawals ADD COLUMN flw_reference TEXT;"); } catch (e) {}
+  try { db.run("ALTER TABLE withdrawals ADD COLUMN flw_status TEXT;"); } catch (e) {}
+  try { db.run("ALTER TABLE withdrawals ADD COLUMN failure_reason TEXT;"); } catch (e) {}
+  try { db.run("ALTER TABLE withdrawals ADD COLUMN net_fiat TEXT;"); } catch (e) {}
 
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS bank_accounts (
       id              INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id         INTEGER NOT NULL,
@@ -205,7 +174,7 @@ export async function initDB() {
     );
   `);
 
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS audit_log (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
       actor_id     INTEGER,
@@ -218,7 +187,7 @@ export async function initDB() {
     );
   `);
 
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS promo_codes (
       code         TEXT PRIMARY KEY,
       reward_orl   REAL    NOT NULL,
@@ -230,7 +199,7 @@ export async function initDB() {
     );
   `);
 
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS promo_redemptions (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id      INTEGER NOT NULL,
@@ -241,7 +210,7 @@ export async function initDB() {
     );
   `);
 
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS achievements (
       user_id      INTEGER NOT NULL,
       achievement  TEXT    NOT NULL,
@@ -250,152 +219,38 @@ export async function initDB() {
     );
   `);
 
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS weekly_leaderboard (
-      week_start   TEXT NOT NULL,
+      week_start   TEXT PRIMARY KEY,
       user_id      INTEGER NOT NULL,
       rank         INTEGER,
       balance      REAL,
       reward_paid  REAL DEFAULT 0,
-      snapshot_at  INTEGER,
-      PRIMARY KEY (week_start, user_id)
+      snapshot_at  INTEGER
     );
   `);
 
-  // Migration: fix the old weekly_leaderboard schema that used `week_start TEXT
-  // PRIMARY KEY` alone. With a single-column PK, the cron's INSERT OR REPLACE
-  // loop overwrote all but the LAST user per week, so historical snapshots were
-  // broken. Detect the old schema and recreate with a composite PK.
-  try {
-    const rows = db.exec("SELECT sql FROM sqlite_master WHERE type='table' AND name='weekly_leaderboard'");
-    const oldSql = rows.length > 0 && rows[0].values.length > 0 ? String(rows[0].values[0][0] || '') : '';
-    if (oldSql && !oldSql.includes('PRIMARY KEY (week_start, user_id)')) {
-      db.exec('DROP TABLE weekly_leaderboard');
-      db.exec(`
-        CREATE TABLE weekly_leaderboard (
-          week_start   TEXT NOT NULL,
-          user_id      INTEGER NOT NULL,
-          rank         INTEGER,
-          balance      REAL,
-          reward_paid  REAL DEFAULT 0,
-          snapshot_at  INTEGER,
-          PRIMARY KEY (week_start, user_id)
-        );
-      `);
-      console.log('[db] Migrated weekly_leaderboard to composite PK (week_start, user_id).');
-    }
-  } catch (e) { /* ignore */ }
+  // Create Indexes
+  db.run(`CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code);`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);`);
 
-  // ── Indexes (critical for performance at scale) ──
-  // Without these, every leaderboard / history / admin query does a full table
-  // scan. At 1M users that means reading millions of rows per request.
-  db.exec(`
-    -- User lookups
-    CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
-    CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code);
-    CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by);
-    CREATE INDEX IF NOT EXISTS idx_users_balance ON users(balance DESC);
-    CREATE INDEX IF NOT EXISTS idx_users_lotto ON users(lotto_date, lotto_tickets);
-    CREATE INDEX IF NOT EXISTS idx_users_country ON users(country);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_completed_tasks_user ON completed_tasks(user_id);`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_withdrawals_user ON withdrawals(user_id);`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_withdrawals_status ON withdrawals(status);`);
 
-    -- Transaction history (user-facing + admin stats)
-    CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);
-    CREATE INDEX IF NOT EXISTS idx_transactions_created ON transactions(created_at DESC);
-
-    -- Completed tasks
-    CREATE INDEX IF NOT EXISTS idx_completed_tasks_user ON completed_tasks(user_id);
-
-    -- Withdrawals (user history + admin queue)
-    CREATE INDEX IF NOT EXISTS idx_withdrawals_user ON withdrawals(user_id, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_withdrawals_status ON withdrawals(status, created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_withdrawals_status_amt ON withdrawals(status, amount_orl DESC);
-
-    -- Bank accounts
-    CREATE INDEX IF NOT EXISTS idx_bank_accounts_user ON bank_accounts(user_id);
-
-    -- Audit log (admin, filtered by action + time)
-    CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action, created_at DESC);
-
-    -- Promo redemptions
-    CREATE INDEX IF NOT EXISTS idx_promo_redemptions_user ON promo_redemptions(user_id);
-    CREATE INDEX IF NOT EXISTS idx_promo_redemptions_code ON promo_redemptions(code);
-
-    -- Achievements
-    CREATE INDEX IF NOT EXISTS idx_achievements_user ON achievements(user_id);
-  `);
-
-  // Settings table — admin-editable key/value store (economy overrides,
-  // feature flags, etc.). Values are JSON strings.
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS settings (
-      key         TEXT PRIMARY KEY,
-      value       TEXT,
-      updated_at  INTEGER,
-      updated_by  INTEGER
-    );
-  `);
-
-  // better-sqlite3 writes are incremental and durable by default (WAL + sync
-  // NORMAL). No full-DB-export needed. A WAL checkpoint on graceful shutdown
-  // ensures the WAL file is merged back into the main DB file.
-  db.pragma('wal_checkpoint(TRUNCATE)');
+  saveDB();
   return db;
 }
 
-/* ─── Settings helpers (admin-editable config store) ──────────── */
-
-export function getSetting(key, fallback = null) {
-  const row = getOne('SELECT value FROM settings WHERE key = ?', [key]);
-  if (!row || row.value == null) return fallback;
-  try { return JSON.parse(row.value); } catch { return fallback; }
-}
-
-export function setSetting(key, value, updatedBy = null) {
-  const json = JSON.stringify(value);
-  return run(`
-    INSERT INTO settings (key, value, updated_at, updated_by)
-    VALUES (@key, @value, @updated_at, @updated_by)
-    ON CONFLICT(key) DO UPDATE SET
-      value = @value, updated_at = @updated_at, updated_by = @updated_by
-  `, { key, value: json, updated_at: Date.now(), updated_by: updatedBy });
-}
-
-export function getAllSettings() {
-  const rows = getAll('SELECT key, value, updated_at, updated_by FROM settings', []);
-  const out = {};
-  for (const r of rows) {
-    try { out[r.key] = JSON.parse(r.value); } catch { out[r.key] = r.value; }
-  }
-  return out;
-}
-
 /**
- * better-sqlite3 writes are synchronous and incremental — they go directly to
- * the WAL file, not a full-DB export. So saveDB() is a no-op kept only for
- * backwards compatibility with callers that still reference it.
+ * Persist the database state to disk.
  */
 export function saveDB() {
-  // No-op: better-sqlite3 writes are already durable (WAL + synchronous=NORMAL).
+  if (!db) return;
+  const data = db.export();
+  fs.writeFileSync(DB_PATH, Buffer.from(data));
 }
-
-/**
- * No-op for backwards compat. better-sqlite3 writes are already instant.
- */
-export function flushNow() {
-  // No-op: better-sqlite3 writes are synchronous and already on disk.
-}
-
-// Graceful shutdown: checkpoint the WAL so the main DB file is up-to-date.
-function _gracefulShutdown() {
-  try {
-    if (db) db.pragma('wal_checkpoint(TRUNCATE)');
-  } catch (e) { /* ignore */ }
-  process.exit(0);
-}
-process.on('SIGINT', _gracefulShutdown);
-process.on('SIGTERM', _gracefulShutdown);
 
 /**
  * Get active db instance.
@@ -404,35 +259,58 @@ export function getDB() {
   return db;
 }
 
-/* ─── Query execution helpers ───────────────────────────────────────
-   better-sqlite3 API:
-   - db.prepare(sql).get(...params)  → single row object or undefined
-   - db.prepare(sql).all(...params)  → array of row objects
-   - db.prepare(sql).run(...params)  → { changes, lastInsertRowid }
-   Params can be positional (?) via array OR named (@/$/:) via object.
-   All synchronous (no Promises needed). */
+/* ─── Query execution helpers ─────────────────────────────────────── */
 
 export function getOne(sql, params = []) {
-  return db.prepare(sql).get(...(Array.isArray(params) ? params : [params]));
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  let res = undefined;
+  if (stmt.step()) {
+    res = stmt.getAsObject();
+  }
+  stmt.free();
+  return res;
 }
 
 export function getAll(sql, params = []) {
-  return db.prepare(sql).all(...(Array.isArray(params) ? params : [params]));
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  const rows = [];
+  while (stmt.step()) {
+    rows.push(stmt.getAsObject());
+  }
+  stmt.free();
+  return rows;
 }
 
 export function run(sql, params = []) {
   const stmt = db.prepare(sql);
-  let result;
   if (Array.isArray(params)) {
-    result = stmt.run(...params);
+    stmt.bind(params);
   } else if (params && typeof params === 'object') {
-    // Named params — better-sqlite3 accepts an object directly. The SQL uses
-    // @key style; better-sqlite3 matches @key, $key, and :key automatically.
-    result = stmt.run(params);
-  } else {
-    result = stmt.run();
+    const boundParams = {};
+    for (const key of Object.keys(params)) {
+      if (key.startsWith('@') || key.startsWith('$') || key.startsWith(':')) {
+        boundParams[key] = params[key];
+      } else {
+        boundParams[`@${key}`] = params[key];
+        boundParams[`$${key}`] = params[key];
+        boundParams[`:${key}`] = params[key];
+      }
+    }
+    stmt.bind(boundParams);
   }
-  return { lastInsertRowid: result.lastInsertRowid, changes: result.changes };
+  stmt.step();
+  stmt.free();
+
+  const lastIdRes = db.exec("SELECT last_insert_rowid() AS id, changes() AS changes");
+  const lastInsertRowid = lastIdRes[0].values[0][0];
+  const changes = lastIdRes[0].values[0][1];
+
+  saveDB();
+
+  console.log("DEBUG run lastIdRes:", JSON.stringify(lastIdRes));
+  return { lastInsertRowid, changes };
 }
 
 /* ─── Business Logic DB Helpers ───────────────────────────────────── */
@@ -491,10 +369,9 @@ export function createUser(telegramId, firstName, lastName, username, referralCo
     }
   }
 
-  const avatarUrl = randomDefaultAvatar();
   const info = run(`
-    INSERT INTO users (telegram_id, first_name, last_name, username, referral_code, referred_by, last_accrue_at, country, avatar_url, created_at, updated_at)
-    VALUES (@telegram_id, @first_name, @last_name, @username, @referral_code, @referred_by, @last_accrue_at, @country, @avatar_url, @created_at, @updated_at)
+    INSERT INTO users (telegram_id, first_name, last_name, username, referral_code, referred_by, last_accrue_at, country, created_at, updated_at)
+    VALUES (@telegram_id, @first_name, @last_name, @username, @referral_code, @referred_by, @last_accrue_at, @country, @created_at, @updated_at)
   `, {
     telegram_id: telegramId,
     first_name: firstName || null,
@@ -504,7 +381,6 @@ export function createUser(telegramId, firstName, lastName, username, referralCo
     referred_by: referredBy,
     last_accrue_at: nowTime,
     country: country || null,
-    avatar_url: avatarUrl,
     created_at: nowTime,
     updated_at: nowTime
   });
@@ -546,7 +422,7 @@ export function addTransaction(userId, type, amount, description) {
 }
 
 export function getTransactions(userId, limit = 20) {
-  return getAll('SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?', [userId, limit]);
+  return getAll("SELECT * FROM transactions WHERE user_id = ? AND type != 'mining' ORDER BY created_at DESC LIMIT ?", [userId, limit]);
 }
 
 export function getCompletedTasks(userId) {
@@ -583,13 +459,7 @@ export function upsertLotteryPool(date, amount, tickets) {
 }
 
 /**
- * Perform drawing for a specific date pool.
- *
- * SCALABILITY: Uses a weighted random pick via SQL (ORDER BY random() * tickets)
- * instead of loading all participants × tickets into memory. The old approach
- * built an array with one entry PER TICKET — at scale (100k users × 10 tickets
- * = 1M entries) this caused OOM. The SQL approach is O(n) in the DB with an
- * index on (lotto_date, lotto_tickets) and uses constant memory.
+ * Perform drawing for a specific date pool
  */
 export function drawLottery(date) {
   const pool = getLotteryPool(date);
@@ -597,22 +467,20 @@ export function drawLottery(date) {
 
   console.log(`[lottery] Running draw for date: ${date}`);
 
-  // Weighted random: pick a single winner where probability ∝ ticket count.
-  // `ORDER BY (random() / lotto_tickets)` gives each user a chance inversely
-  // proportional to their ticket count → effectively proportional to tickets.
-  // This is a single indexed query, constant memory, no array building.
-  const winner = getOne(
-    `SELECT id, telegram_id FROM users
-     WHERE lotto_date = ? AND lotto_tickets > 0
-     ORDER BY (random() / lotto_tickets) ASC
-     LIMIT 1`,
-    [date]
-  );
+  const participants = getAll('SELECT id, telegram_id, lotto_tickets FROM users WHERE lotto_date = ? AND lotto_tickets > 0', [date]);
 
   let winnerId = null;
   let winnerTelegramId = null;
 
-  if (winner) {
+  if (participants.length > 0) {
+    const poolList = [];
+    for (const p of participants) {
+      for (let i = 0; i < p.lotto_tickets; i++) {
+        poolList.push(p);
+      }
+    }
+
+    const winner = poolList[Math.floor(Math.random() * poolList.length)];
     winnerId = winner.id;
     winnerTelegramId = winner.telegram_id;
 
@@ -686,9 +554,7 @@ export function createWithdrawal(userId, method, amountOrl, feeOrl, netAmount, w
 }
 
 export function getPendingWithdrawalsCount(userId) {
-  // Count both 'pending' and 'needs_approval' so a user can't stack a second
-  // withdrawal while one is already awaiting processing.
-  const res = getOne("SELECT COUNT(*) AS cnt FROM withdrawals WHERE user_id = ? AND status IN ('pending','needs_approval')", [userId]);
+  const res = getOne('SELECT COUNT(*) AS cnt FROM withdrawals WHERE user_id = ? AND status = ?', [userId, 'pending']);
   return res ? res.cnt : 0;
 }
 
@@ -885,9 +751,6 @@ export function getUserAchievements(userId) {
 }
 
 /* ─── DB backup ─────────────────────────────────────────────── */
-// Uses better-sqlite3's online backup API which creates a consistent snapshot
-// even while the DB is being actively written to (unlike file copy which can
-// produce a corrupt copy if WAL hasn't been checkpointed).
 
 export function backupDatabase() {
   try {
@@ -895,8 +758,7 @@ export function backupDatabase() {
     fs.mkdirSync(backupDir, { recursive: true });
     const dateStr = new Date().toISOString().slice(0, 10);
     const backupPath = path.resolve(backupDir, `orael-${dateStr}.db`);
-    // Online backup: safe to run while the server is serving traffic.
-    db.backup(backupPath);
+    fs.copyFileSync(DB_PATH, backupPath);
     console.log(`[backup] Database backed up to ${backupPath}`);
 
     // Keep only the last 14 backups
@@ -927,33 +789,6 @@ export function incrementTotalWithdrawn(userId, amount) {
 
 export function getAllUsers(limit = 100, offset = 0) {
   return getAll('SELECT id, telegram_id, first_name, last_name, username, balance, role, permissions, banned, country, created_at FROM users ORDER BY id DESC LIMIT ? OFFSET ?', [limit, offset]);
-}
-
-/**
- * Search users by name / username / telegram id using SQL LIKE (NOT the old
- * load-100k-into-memory approach). sql.js `?` placeholders work fine with
- * LIKE and `%` patterns.
- */
-export function searchUsers(query, limit = 50, offset = 0) {
-  const q = `%${query}%`;
-  return getAll(
-    `SELECT id, telegram_id, first_name, last_name, username, balance, role, permissions, banned, country, created_at
-     FROM users
-     WHERE first_name LIKE ? OR last_name LIKE ? OR username LIKE ? OR CAST(telegram_id AS TEXT) LIKE ?
-     ORDER BY id DESC
-     LIMIT ? OFFSET ?`,
-    [q, q, q, q, limit, offset]
-  );
-}
-
-export function countSearchUsers(query) {
-  const q = `%${query}%`;
-  const res = getOne(
-    `SELECT COUNT(*) AS cnt FROM users
-     WHERE first_name LIKE ? OR last_name LIKE ? OR username LIKE ? OR CAST(telegram_id AS TEXT) LIKE ?`,
-    [q, q, q, q]
-  );
-  return res ? res.cnt : 0;
 }
 
 export function countUsers() {
@@ -1026,7 +861,6 @@ export function getStats() {
 export default {
   initDB,
   saveDB,
-  flushNow,
   getDB,
   getUser,
   getUserById,

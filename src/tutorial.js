@@ -85,6 +85,7 @@ async function completeTutorial() {
   }
   const veil = $('tutorialVeil');
   if (veil) veil.classList.remove('show');
+  setLocal('tutorialSeen', true);
   setLocal('_tutorialSeen', true);
   haptic('success');
 }

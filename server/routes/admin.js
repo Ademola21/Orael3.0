@@ -7,8 +7,6 @@ import {
   getUser,
   getUserById,
   getAllUsers,
-  searchUsers,
-  countSearchUsers,
   countUsers,
   getPendingWithdrawalsAll,
   countPendingWithdrawals,
@@ -31,12 +29,9 @@ import {
   backupDatabase,
   logAudit,
   run,
-  flushNow,
 } from '../db.js';
 import { requireAdmin, requirePermission, isSuperAdmin, MOD_PERMISSIONS } from '../middleware/adminAuth.js';
-import { getEconomyConfig, getFeatureFlags, invalidateEconomyCache, invalidateFlagsCache, DEFAULT_FLAGS } from '../settings.js';
-import { setSetting, getAllSettings, getUserAchievements, ACHIEVEMENTS } from '../db.js';
-import { sendTelegramMessage } from '../services/notifications.js';
+import { ORL_TO_NGN, ORL_PER_USD, MANUAL_APPROVAL_THRESHOLD_ORL } from '../economy.js';
 import {
   createTransfer,
   purchaseAirtime,
@@ -59,15 +54,12 @@ router.use(requireAdmin);
 router.get('/stats', (req, res) => {
   try {
     const stats = getStats();
-    const E = getEconomyConfig();
-    const flags = getFeatureFlags();
     return res.json({
       ...stats,
-      totalBalanceUsd: stats.totalBalance / E.ORL_PER_USD,
-      totalMinedUsd: stats.totalMined / E.ORL_PER_USD,
-      totalAdsUsd: stats.totalAds / E.ORL_PER_USD,
-      totalWithdrawalsUsd: stats.totalWithdrawals / E.ORL_PER_USD,
-      flags,
+      totalBalanceUsd: stats.totalBalance / ORL_PER_USD,
+      totalMinedUsd: stats.totalMined / ORL_PER_USD,
+      totalAdsUsd: stats.totalAds / ORL_PER_USD,
+      totalWithdrawalsUsd: stats.totalWithdrawals / ORL_PER_USD,
     });
   } catch (err) {
     console.error('GET /admin/stats error:', err);
@@ -87,9 +79,15 @@ router.get('/users', requirePermission('view_users'), (req, res) => {
     let users;
     let total;
     if (search) {
-      // SQL LIKE search — no more loading 100k users into memory.
-      users = searchUsers(search, limit, offset);
-      total = countSearchUsers(search);
+      const pattern = `%${search}%`;
+      // sql.js doesn't support LIKE with params easily, do manual filter
+      const allUsers = getAllUsers(100000, 0);
+      users = allUsers.filter(u =>
+        String(u.telegram_id).includes(search) ||
+        (u.username || '').toLowerCase().includes(search.toLowerCase()) ||
+        (u.first_name || '').toLowerCase().includes(search.toLowerCase())
+      ).slice(offset, offset + limit);
+      total = allUsers.length;
     } else {
       users = getAllUsers(limit, offset);
       total = countUsers();
@@ -311,7 +309,6 @@ router.post('/withdrawals/:id/process', requirePermission('process_withdrawals')
     /* ── APPROVE: process Flutterwave transfer if not already done ── */
     // If withdrawal was needs_approval and has no flw_transfer_id yet, initiate the transfer now
     if (!withdrawal.flw_transfer_id && (withdrawal.method === 'bank' || withdrawal.method === 'airtime')) {
-      const E = getEconomyConfig();
       try {
         // Parse wallet_info
         // Bank: "BankName • 0123456789 • Account Name"
@@ -333,7 +330,7 @@ router.post('/withdrawals/:id/process', requirePermission('process_withdrawals')
             return res.status(400).json({ error: `Bank "${bankName}" not found in Flutterwave` });
           }
 
-          const netNgn = Math.floor(withdrawal.net_amount * E.ORL_TO_NGN);
+          const netNgn = Math.floor(withdrawal.net_amount * ORL_TO_NGN);
           const flwReference = generateTransferReference(user.id);
 
           const flwResult = await createTransfer({
@@ -357,7 +354,7 @@ router.post('/withdrawals/:id/process', requirePermission('process_withdrawals')
           return res.json({ success: true, status: 'pending', message: 'Transfer initiated. Webhook will confirm completion.' });
         } else if (withdrawal.method === 'airtime') {
           const phone = withdrawal.wallet_info;
-          const netNgn = Math.floor(withdrawal.net_amount * E.ORL_TO_NGN);
+          const netNgn = Math.floor(withdrawal.net_amount * ORL_TO_NGN);
           const flwReference = generateAirtimeReference(user.id);
 
           const flwResult = await purchaseAirtime({
@@ -472,37 +469,16 @@ router.post('/withdrawals/bulk-process', requirePermission('process_withdrawals'
             updateUser(user.id, { balance: user.balance + withdrawal.amount_orl });
             addTransaction(user.id, 'withdraw_refund', withdrawal.amount_orl, `Withdrawal #${wid} bulk rejected — refunded`);
           }
-          flushNow();
-          results.push({ id: wid, status: 'success' });
-          continue;
+        } else {
+          // For bulk approve, only mark completed (admin should use individual approve
+          // for large withdrawals that need Flutterwave initiation)
+          updateWithdrawalStatusById(wid, 'completed', 'Bulk approved by admin');
+          const user = getUserById(withdrawal.user_id);
+          if (user) {
+            await notifyWithdrawalCompleted(user.telegram_id, withdrawal.amount_orl, withdrawal.method, withdrawal.net_fiat || '');
+          }
         }
 
-        // BULK APPROVE GUARD: bank/airtime withdrawals that are still
-        // `needs_approval` and have NOT yet been sent to Flutterwave MUST be
-        // approved individually (the individual approve flow initiates the
-        // real Flutterwave transfer). Bulk-approving them would mark the user
-        // paid without any money actually moving — a real footgun. Refuse here
-        // and tell the admin to use individual approve.
-        const needsFlwInitiation =
-          !withdrawal.flw_transfer_id &&
-          (withdrawal.method === 'bank' || withdrawal.method === 'airtime') &&
-          withdrawal.status === 'needs_approval';
-        if (needsFlwInitiation) {
-          results.push({
-            id: wid,
-            status: 'skipped',
-            error: 'Needs Flutterwave initiation — approve individually',
-          });
-          continue;
-        }
-
-        // USDT (manual) or already-initiated bank/airtime: safe to mark completed.
-        updateWithdrawalStatusById(wid, 'completed', 'Bulk approved by admin');
-        const user = getUserById(withdrawal.user_id);
-        if (user) {
-          await notifyWithdrawalCompleted(user.telegram_id, withdrawal.amount_orl, withdrawal.method, withdrawal.net_fiat || '');
-        }
-        flushNow();
         results.push({ id: wid, status: 'success' });
       } catch (e) {
         results.push({ id: wid, status: 'error', error: e.message });
@@ -607,236 +583,6 @@ router.get('/permissions', (req, res) => {
     myPermissions: req.permissions,
     isSuperAdmin: req.isAdmin && isSuperAdmin(req.adminUser?.telegram_id),
   });
-});
-
-/* ─── GET /api/admin/users/:id/detail — full user profile ─────── */
-/* Returns user + transactions + withdrawals + achievements + referral info.
- * Available to any admin/mod with view_users. */
-router.get('/users/:id/detail', requirePermission('view_users'), (req, res) => {
-  try {
-    const userId = parseInt(req.params.id);
-    const user = getUserById(userId);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    const transactions = getAll('SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 50', [userId]);
-    const withdrawals = getAll('SELECT * FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC LIMIT 20', [userId]);
-    const achievements = getUserAchievements(userId);
-    const referrer = user.referred_by ? getUserById(user.referred_by) : null;
-    const referrals = getAll('SELECT id, telegram_id, first_name, username, balance, created_at FROM users WHERE referred_by = ? ORDER BY created_at DESC LIMIT 50', [userId]);
-
-    // Don't expose sensitive fields (PIN hash)
-    delete user.withdrawal_pin;
-
-    return res.json({
-      user: { ...user, isSuperAdmin: isSuperAdmin(user.telegram_id) },
-      transactions,
-      withdrawals,
-      achievements,
-      allAchievements: ACHIEVEMENTS,
-      referrer: referrer ? { id: referrer.id, telegram_id: referrer.telegram_id, first_name: referrer.first_name, username: referrer.username } : null,
-      referrals,
-    });
-  } catch (err) {
-    console.error('GET /admin/users/:id/detail error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/* ─── GET /api/admin/economy — live economy config ────────────── */
-router.get('/economy', (req, res) => {
-  try {
-    return res.json({
-      economy: getEconomyConfig(),
-      flags: getFeatureFlags(),
-      allSettings: getAllSettings(),
-    });
-  } catch (err) {
-    console.error('GET /admin/economy error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/* ─── PUT /api/admin/economy — update economy overrides ───────── */
-/* Super-admin only. Body: partial economy object (only the fields to change).
- * Merges with existing overrides + defaults. */
-router.put('/economy', (req, res) => {
-  try {
-    if (!req.isAdmin || !isSuperAdmin(req.adminUser?.telegram_id)) {
-      return res.status(403).json({ error: 'Super admin only' });
-    }
-    const updates = req.body?.economy || req.body;
-    if (!updates || typeof updates !== 'object') {
-      return res.status(400).json({ error: 'economy object required' });
-    }
-
-    // Merge: existing overrides + new updates
-    const existing = getAllSettings().economy_overrides || {};
-    const merged = { ...existing, ...updates };
-
-    // Whitelist known keys to prevent junk injection
-    const allowed = new Set(Object.keys(getEconomyConfig()));
-    const clean = {};
-    for (const [k, v] of Object.entries(merged)) {
-      if (allowed.has(k)) clean[k] = v;
-    }
-
-    setSetting('economy_overrides', clean, req.adminUser?.id);
-    flushNow();
-    invalidateEconomyCache();
-
-    logAudit(req.adminUser?.id, req.adminUser?.role, 'economy_update', null, { updates: clean }, req.ip);
-
-    return res.json({ success: true, economy: getEconomyConfig() });
-  } catch (err) {
-    console.error('PUT /admin/economy error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/* ─── POST /api/admin/economy/reset — clear all overrides ─────── */
-router.post('/economy/reset', (req, res) => {
-  try {
-    if (!req.isAdmin || !isSuperAdmin(req.adminUser?.telegram_id)) {
-      return res.status(403).json({ error: 'Super admin only' });
-    }
-    setSetting('economy_overrides', {}, req.adminUser?.id);
-    flushNow();
-    invalidateEconomyCache();
-    logAudit(req.adminUser?.id, req.adminUser?.role, 'economy_reset', null, {}, req.ip);
-    return res.json({ success: true, economy: getEconomyConfig() });
-  } catch (err) {
-    console.error('POST /admin/economy/reset error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/* ─── GET /api/admin/settings — feature flags ─────────────────── */
-router.get('/settings', (req, res) => {
-  try {
-    return res.json({ flags: getFeatureFlags(), defaults: DEFAULT_FLAGS });
-  } catch (err) {
-    console.error('GET /admin/settings error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/* ─── PUT /api/admin/settings — update feature flags ──────────── */
-router.put('/settings', (req, res) => {
-  try {
-    if (!req.isAdmin || !isSuperAdmin(req.adminUser?.telegram_id)) {
-      return res.status(403).json({ error: 'Super admin only' });
-    }
-    const updates = req.body?.flags || req.body;
-    if (!updates || typeof updates !== 'object') {
-      return res.status(400).json({ error: 'flags object required' });
-    }
-    const existing = getFeatureFlags();
-    const merged = { ...existing };
-    for (const k of Object.keys(DEFAULT_FLAGS)) {
-      if (typeof updates[k] === 'boolean') merged[k] = updates[k];
-    }
-    setSetting('feature_flags', merged, req.adminUser?.id);
-    flushNow();
-    invalidateFlagsCache();
-    logAudit(req.adminUser?.id, req.adminUser?.role, 'flags_update', null, merged, req.ip);
-    return res.json({ success: true, flags: getFeatureFlags() });
-  } catch (err) {
-    console.error('PUT /admin/settings error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/* ─── GET /api/admin/audit-log ────────────────────────────────── */
-router.get('/audit-log', requirePermission('view_transactions'), (req, res) => {
-  try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 30));
-    const offset = (page - 1) * limit;
-    const action = req.query.action;
-
-    let rows, total;
-    if (action) {
-      rows = getAll('SELECT * FROM audit_log WHERE action = ? ORDER BY created_at DESC LIMIT ? OFFSET ?', [action, limit, offset]);
-      total = getOne('SELECT COUNT(*) AS cnt FROM audit_log WHERE action = ?', [action])?.cnt || 0;
-    } else {
-      rows = getAll('SELECT * FROM audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?', [limit, offset]);
-      total = getOne('SELECT COUNT(*) AS cnt FROM audit_log')?.cnt || 0;
-    }
-
-    return res.json({
-      entries: rows,
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
-    });
-  } catch (err) {
-    console.error('GET /admin/audit-log error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/* ─── POST /api/admin/broadcast — send message to all users ───── */
-/* Super-admin only. Body: { text } — sends via bot.sendMessage to every
- * user with a known telegram_id. Runs in the background (returns immediately
- * with a job id); Telegram rate-limits to ~30 msg/sec so we pace at 20/sec. */
-const broadcastJobs = new Map();
-
-router.post('/broadcast', async (req, res) => {
-  try {
-    if (!req.isAdmin || !isSuperAdmin(req.adminUser?.telegram_id)) {
-      return res.status(403).json({ error: 'Super admin only' });
-    }
-    if (!isFeatureEnabled('broadcast_enabled')) {
-      return res.status(503).json({ error: 'Broadcasts are disabled' });
-    }
-    const { text } = req.body;
-    if (!text || typeof text !== 'string' || text.length === 0) {
-      return res.status(400).json({ error: 'text is required' });
-    }
-    if (text.length > 4000) {
-      return res.status(400).json({ error: 'Message too long (max 4000 chars)' });
-    }
-
-    const jobId = `bc_${Date.now()}`;
-    const allUsers = getAll('SELECT telegram_id, first_name FROM users WHERE banned = 0', []);
-    broadcastJobs.set(jobId, { total: allUsers.length, sent: 0, failed: 0, status: 'running', startedAt: Date.now() });
-    logAudit(req.adminUser?.id, req.adminUser?.role, 'broadcast_start', null, { jobId, total: allUsers.length }, req.ip);
-
-    // Fire and forget — runs in background
-    (async () => {
-      const job = broadcastJobs.get(jobId);
-      for (const u of allUsers) {
-        try {
-          await sendTelegramMessage(u.telegram_id, text);
-          job.sent++;
-        } catch {
-          job.failed++;
-        }
-        // Pace at ~20 msg/sec to stay under Telegram's global limit
-        await new Promise(r => setTimeout(r, 50));
-      }
-      job.status = 'done';
-      job.finishedAt = Date.now();
-      logAudit(req.adminUser?.id, req.adminUser?.role, 'broadcast_done', null, { jobId, sent: job.sent, failed: job.failed }, req.ip);
-    })().catch(e => {
-      const job = broadcastJobs.get(jobId);
-      if (job) { job.status = 'error'; job.error = e.message; }
-    });
-
-    return res.json({ success: true, jobId, total: allUsers.length, message: 'Broadcast started in background.' });
-  } catch (err) {
-    console.error('POST /admin/broadcast error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/* ─── GET /api/admin/broadcast/:jobId — poll broadcast progress ── */
-router.get('/broadcast/:jobId', (req, res) => {
-  try {
-    const job = broadcastJobs.get(req.params.jobId);
-    if (!job) return res.status(404).json({ error: 'Job not found' });
-    return res.json(job);
-  } catch (err) {
-    return res.status(500).json({ error: 'Internal server error' });
-  }
 });
 
 export default router;

@@ -1,5 +1,17 @@
 import { Router } from 'express';
 import {
+  WHEEL_PRIZES,
+  WHEEL_WEIGHTS,
+  SCRATCH_PRIZES,
+  SCRATCH_WEIGHTS,
+  CHEST_GOAL,
+  CHEST_REWARD_MIN,
+  CHEST_REWARD_MAX,
+  LOTTO_TICKET_ORL,
+  COINFLIP_WIN,
+  COINFLIP_LOSE,
+} from '../economy.js';
+import {
   getUser,
   updateUser,
   addTransaction,
@@ -11,8 +23,6 @@ import {
 import { accrueMinedORL } from '../services/mining.js';
 import { trackAdWatched } from '../services/adTracking.js';
 import { getUserState } from './user.js';
-import { getEconomyConfig } from '../settings.js';
-import { isFeatureEnabled } from '../settings.js';
 
 const router = Router();
 
@@ -36,16 +46,12 @@ function todayStr() {
 
 router.post('/spin', async (req, res) => {
   try {
-    if (!isFeatureEnabled('games_enabled')) {
-      return res.status(503).json({ error: 'Games are temporarily disabled' });
-    }
     const telegramUser = req.user;
     let user = await getUser(telegramUser.id);
     await accrueMinedORL(user);
 
-    const E = getEconomyConfig();
-    const prizeIndex = weightedRandomIndex(E.WHEEL_WEIGHTS);
-    const prizeAmount = E.WHEEL_PRIZES[prizeIndex];
+    const prizeIndex = weightedRandomIndex(WHEEL_WEIGHTS);
+    const prizeAmount = WHEEL_PRIZES[prizeIndex];
 
     // Update daily counter (for backwards-compat with old clients)
     if (user.spin_date !== todayStr()) {
@@ -92,9 +98,8 @@ router.post('/scratch', async (req, res) => {
       user.scratch_date = todayStr();
     }
 
-    const E = getEconomyConfig();
-    const prizeIndex = weightedRandomIndex(E.SCRATCH_WEIGHTS);
-    const prizeAmount = E.SCRATCH_PRIZES[prizeIndex];
+    const prizeIndex = weightedRandomIndex(SCRATCH_WEIGHTS);
+    const prizeAmount = SCRATCH_PRIZES[prizeIndex];
 
     if (prizeAmount > 0) {
       user.balance += prizeAmount;
@@ -119,21 +124,17 @@ router.post('/scratch', async (req, res) => {
 
 router.post('/chest', async (req, res) => {
   try {
-    if (!isFeatureEnabled('games_enabled')) {
-      return res.status(503).json({ error: 'Games are temporarily disabled' });
-    }
     const telegramUser = req.user;
     let user = await getUser(telegramUser.id);
     await accrueMinedORL(user);
 
-    const E = getEconomyConfig();
     user.chest_progress = (user.chest_progress || 0) + 1;
 
-    if (user.chest_progress >= E.CHEST_GOAL) {
+    if (user.chest_progress >= CHEST_GOAL) {
       user.chest_progress = 0;
       const reward =
-        Math.floor(Math.random() * (E.CHEST_REWARD_MAX - E.CHEST_REWARD_MIN + 1)) +
-        E.CHEST_REWARD_MIN;
+        Math.floor(Math.random() * (CHEST_REWARD_MAX - CHEST_REWARD_MIN + 1)) +
+        CHEST_REWARD_MIN;
       user.balance += reward;
       await addTransaction(user.id, 'chest', reward, 'Treasure chest reward');
       await updateUser(user);
@@ -169,9 +170,6 @@ router.post('/chest', async (req, res) => {
 
 router.post('/coinflip', async (req, res) => {
   try {
-    if (!isFeatureEnabled('games_enabled')) {
-      return res.status(503).json({ error: 'Games are temporarily disabled' });
-    }
     const telegramUser = req.user;
     const { choice } = req.body; // 'heads' or 'tails'
     let user = await getUser(telegramUser.id);
@@ -181,11 +179,10 @@ router.post('/coinflip', async (req, res) => {
       return res.status(400).json({ error: 'Pick heads or tails' });
     }
 
-    const E = getEconomyConfig();
     // Server picks the result (fair 50/50)
     const result = Math.random() < 0.5 ? 'heads' : 'tails';
     const won = result === choice;
-    const prizeAmount = won ? E.COINFLIP_WIN : E.COINFLIP_LOSE;
+    const prizeAmount = won ? COINFLIP_WIN : COINFLIP_LOSE;
 
     if (prizeAmount > 0) {
       user.balance += prizeAmount;
@@ -225,8 +222,6 @@ router.post('/lottery/ticket', async (req, res) => {
     }
 
     if (type === 'buy') {
-      const E = getEconomyConfig();
-      const LOTTO_TICKET_ORL = E.LOTTO_TICKET_ORL;
       if (user.balance < LOTTO_TICKET_ORL) {
         return res
           .status(400)
@@ -246,8 +241,7 @@ router.post('/lottery/ticket', async (req, res) => {
 
     user.lotto_tickets += 1;
 
-    const E2 = getEconomyConfig();
-    await upsertLotteryPool(todayStr(), E2.LOTTO_TICKET_ORL, 1);
+    await upsertLotteryPool(todayStr(), LOTTO_TICKET_ORL, 1);
     await updateUser(user);
 
     const pool = await getLotteryPool(todayStr());

@@ -129,12 +129,12 @@ function setupVideoWall() {
   if (!videoWallBtn) return;
 
   videoWallBtn.addEventListener('click', () => {
-    playAd('Video ad loading…', 'Watch to earn 30 ORL.', 15, async () => {
+    playAd('Video ad loading…', 'Watch to earn 100 ORL.', 15, async () => {
       try {
         const res = await api('/api/earn/video-wall', { method: 'POST' });
         updateState(res.user || res);
         render();
-        toast('Video reward', `+${res.reward || 30} ORL`);
+        toast('Video reward', `+${res.reward || 100} ORL`);
       } catch (e) { /* handled */ }
     });
   });
@@ -158,7 +158,7 @@ function setupFaucet() {
         const res = await api('/api/earn/faucet', { method: 'POST' });
         updateState(res);
         render();
-        toast('Hourly bonus', `+${res.reward || 20} ORL`);
+        toast('Hourly bonus', `+${res.reward || 80} ORL`);
       } catch (e) { /* handled */ }
     });
   });
@@ -239,11 +239,8 @@ function renderAdsgramTasks() {
     }, 2500);
   };
 
-  // Per AdsGram docs, the <adsgram-task> web component emits exactly 4 events:
-  // `reward`, `onError`, `onBannerNotFound`, `onTooLongSession`. (`onReward` is
-  // an AdController event for rewarded VIDEO, not a task event — the old
-  // listener was dead code and has been removed.)
   taskEl.addEventListener('reward', handleReward);
+  taskEl.addEventListener('onReward', handleReward);
 
   taskEl.addEventListener('onBannerNotFound', () => {
     console.log('[Adsgram Task] No banner found.');
@@ -254,16 +251,24 @@ function renderAdsgramTasks() {
     `;
   });
 
-  taskEl.addEventListener('onTooLongSession', () => {
-    container.innerHTML = `
-      <div style="font-size:13px;color:var(--ink-soft);text-align:center;padding:12px 0;">
-        Session too long — restart the app to load fresh tasks.
-      </div>
-    `;
-  });
-
   taskEl.addEventListener('onError', (err) => {
     console.error('[Adsgram Task] Error:', err);
+    
+    const S = getState();
+    fetch('/api/log-ad-error', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: S.id,
+        blockId: blockId,
+        error: err ? {
+          message: err.message || err.detail || 'Task Error',
+          description: err.description,
+          code: err.code
+        } : 'Unknown task error'
+      })
+    }).catch(e => console.error('Failed to send task error log:', e));
+
     container.innerHTML = `
       <div style="font-size:13px;color:var(--ink-soft);text-align:center;padding:12px 0;">
         No tasks available at the moment.

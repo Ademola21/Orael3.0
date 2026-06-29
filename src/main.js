@@ -1,4 +1,3 @@
-import './devmock.js'; // side-effect: installs Telegram WebApp mock in DEV_MODE (must run first)
 import { initTelegram, isTelegramEnv } from './telegram.js';
 import { api } from './api.js';
 import { updateState, setLocal, loadCachedState, getState } from './state.js';
@@ -7,8 +6,6 @@ import { setupMining } from './mining.js';
 import { buildWheel, setupPlay, renderLeaderboard } from './play.js';
 import { setupEarn, renderTasks, renderStreak } from './earn.js';
 import { setupWallet } from './wallet.js';
-import { setupProfile } from './profile.js';
-import { setupAdmin } from './admin.js';
 import { setupTutorial } from './tutorial.js';
 import {
   checkBalanceAnimation,
@@ -22,10 +19,13 @@ import {
 } from './animations.js';
 
 import './styles/index.css';
-import './styles/profile.css';
-import './styles/admin.css';
+
+let booted = false;
 
 async function boot() {
+  if (booted) return;
+  booted = true;
+
   // 1. Initialize Telegram SDK
   const { tg, user, startParam } = initTelegram();
 
@@ -100,8 +100,6 @@ async function boot() {
   setupPlay();
   setupEarn();
   setupWallet();
-  setupProfile();
-  setupAdmin();
 
   // 5. Initial render
   render();

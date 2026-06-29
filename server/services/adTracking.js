@@ -4,8 +4,8 @@
 //  ad counter and credit milestone bonuses automatically.
 // ─────────────────────────────────────────────────────────────
 
+import { AD_MILESTONES } from '../economy.js';
 import { getUserById, updateUser, addTransaction, incrementTotalAdsWatched, unlockAchievement } from '../db.js';
-import { getEconomyConfig } from '../settings.js';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -22,8 +22,6 @@ export async function trackAdWatched(userId) {
   const user = await getUserById(userId);
   if (!user) return { count: 0, milestonesHit: [] };
 
-  const E = getEconomyConfig();
-  const AD_MILESTONES = E.AD_MILESTONES;
   const today = todayStr();
 
   // Reset daily counter if new day
@@ -83,8 +81,6 @@ export async function trackAdWatched(userId) {
  * @returns {object} { count, milestones: [{ads, bonus, claimed}, ...], nextMilestone }
  */
 export function getAdChallengeProgress(user) {
-  const E = getEconomyConfig();
-  const AD_MILESTONES = E.AD_MILESTONES;
   const today = todayStr();
   const count = user.ads_today_date === today ? (user.ads_today_count || 0) : 0;
   const claimedStr = user.ads_today_date === today ? (user.ad_milestones_claimed || '') : '';

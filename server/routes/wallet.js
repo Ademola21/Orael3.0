@@ -26,13 +26,19 @@ import {
   logAudit,
   getOne,
   run,
-  flushNow,
   incrementTotalWithdrawn,
   unlockAchievement,
 } from '../db.js';
 import { accrueMinedORL } from '../services/mining.js';
 import { getUserState } from './user.js';
-import { getEconomyConfig, isFeatureEnabled } from '../settings.js';
+import {
+  WITHDRAWAL_FEE_PCT,
+  WITHDRAWAL_FEE_PRO_PCT,
+  WITHDRAWAL_METHODS,
+  ORL_TO_NGN,
+  ORL_PER_USD,
+  MANUAL_APPROVAL_THRESHOLD_ORL,
+} from '../economy.js';
 import {
   listBanks,
   resolveAccount,
@@ -56,40 +62,11 @@ const router = Router();
 
 /* ─── PIN helpers ───────────────────────────────────────────── */
 /**
- * Hash a 4-digit PIN using scrypt with a per-user random salt.
- * Returns a self-describing string "scrypt:<saltHex>:<hashHex>" so verify
- * doesn't need the telegram_id. scrypt is memory-hard, making offline brute
- * force of a leaked DB infeasible (unlike the old fast SHA-256 scheme that
- * used the user's PUBLIC telegram_id as the "salt").
+ * Hash a 4-digit PIN with SHA-256 + per-user salt.
+ * Salt = user's telegram_id (already unique).
  */
-function hashPin(pin) {
-  const salt = crypto.randomBytes(16);
-  const hash = crypto.scryptSync(String(pin), salt, 32, { N: 16384, r: 8, p: 1 });
-  return `scrypt:${salt.toString('hex')}:${hash.toString('hex')}`;
-}
-
-/**
- * Verify a PIN against a stored hash, constant-time. Supports the new scrypt
- * format and a legacy SHA-256(telegramId:pin) fallback for pins set before
- * this fix (so existing users aren't locked out on upgrade).
- */
-function verifyPin(pin, stored, telegramId) {
-  if (!stored) return false;
-  if (stored.startsWith('scrypt:')) {
-    const parts = stored.split(':');
-    if (parts.length !== 3) return false;
-    const salt = Buffer.from(parts[1], 'hex');
-    const expected = Buffer.from(parts[2], 'hex');
-    if (expected.length === 0) return false;
-    const computed = crypto.scryptSync(String(pin), salt, expected.length, { N: 16384, r: 8, p: 1 });
-    if (computed.length !== expected.length) return false;
-    return crypto.timingSafeEqual(computed, expected);
-  }
-  // Legacy fallback: SHA-256(telegramId:pin) — constant-time compare.
-  const legacy = crypto.createHash('sha256').update(`${telegramId}:${pin}`).digest();
-  const storedBuf = Buffer.from(stored, 'hex');
-  if (legacy.length !== storedBuf.length) return false;
-  return crypto.timingSafeEqual(legacy, storedBuf);
+function hashPin(pin, telegramId) {
+  return crypto.createHash('sha256').update(`${telegramId}:${pin}`).digest('hex');
 }
 
 /* ─── POST /api/wallet/set-pin — set withdrawal PIN ─────────── */
@@ -111,9 +88,8 @@ router.post('/set-pin', async (req, res) => {
       return res.status(400).json({ error: 'PIN is too weak. Choose a different one.' });
     }
 
-    const hashed = hashPin(pin);
+    const hashed = hashPin(pin, telegramUser.id);
     updateUser(user.id, { withdrawal_pin: hashed });
-    flushNow();
     logAudit(user.id, 'user', 'set_withdrawal_pin', user.id, {}, req.ip);
 
     return res.json({ success: true, message: 'Withdrawal PIN set successfully' });
@@ -138,8 +114,8 @@ router.post('/verify-pin', async (req, res) => {
       return res.status(400).json({ error: 'No PIN set. Set your withdrawal PIN first.', needsPin: true });
     }
 
-    const ok = verifyPin(pin, user.withdrawal_pin, telegramUser.id);
-    if (!ok) {
+    const hashed = hashPin(pin, telegramUser.id);
+    if (hashed !== user.withdrawal_pin) {
       return res.status(403).json({ error: 'Incorrect PIN', valid: false });
     }
 
@@ -193,34 +169,6 @@ router.post('/pro', async (req, res) => {
   }
 });
 
-/* ─── POST /api/wallet/pro/dev-activate — DEV_MODE only ─────────── */
-// Lets the browser preview activate Pro without a real Telegram Stars payment
-// (there's no real bot token in dev). No-op / 404 in production.
-router.post('/pro/dev-activate', async (req, res) => {
-  if (process.env.DEV_MODE !== 'true') {
-    return res.status(404).json({ error: 'Not available' });
-  }
-  try {
-    const telegramUser = req.telegramUser;
-    let user = getUser(telegramUser.id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    const now = Date.now();
-    const base = Math.max(user.pro_until || 0, now);
-    const proUntil = base + 30 * 24 * 60 * 60 * 1000; // +30 days
-    updateUser(user.id, { pro_until: proUntil });
-    flushNow();
-    addTransaction(user.id, 'pro_activate', 0, 'Orael Pro activated (DEV MODE)');
-    unlockAchievement(user.id, 'pro_member');
-
-    const state = await getUserState(telegramUser.id);
-    return res.json({ success: true, proUntil, state });
-  } catch (err) {
-    console.error('POST /pro/dev-activate error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
 /* ─── GET /api/wallet/methods — available withdrawal methods ──────── */
 
 router.get('/methods', async (req, res) => {
@@ -233,7 +181,7 @@ router.get('/methods', async (req, res) => {
     const isNG = !country || country === 'NG';
 
     const methods = [];
-    for (const [key, m] of Object.entries(E.WITHDRAWAL_METHODS)) {
+    for (const [key, m] of Object.entries(WITHDRAWAL_METHODS)) {
       if (m.countries === 'all' || (Array.isArray(m.countries) && m.countries.includes(country))) {
         methods.push({
           id: key,
@@ -246,7 +194,7 @@ router.get('/methods', async (req, res) => {
     }
 
     if (!isNG && !methods.find(m => m.id === 'usdt')) {
-      methods.push({ id: 'usdt', ...E.WITHDRAWAL_METHODS.usdt });
+      methods.push({ id: 'usdt', ...WITHDRAWAL_METHODS.usdt });
     }
 
     return res.json({ methods, country, isNG });
@@ -375,9 +323,6 @@ router.delete('/bank-accounts/:id', async (req, res) => {
 
 router.post('/withdraw', async (req, res) => {
   try {
-    if (!isFeatureEnabled('withdrawals_enabled')) {
-      return res.status(503).json({ error: 'Withdrawals are temporarily disabled' });
-    }
     const telegramUser = req.telegramUser;
     let user = getUser(telegramUser.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -385,7 +330,6 @@ router.post('/withdraw', async (req, res) => {
     await accrueMinedORL(user);
     user = getUser(telegramUser.id);
 
-    const E = getEconomyConfig();
     const { method: methodKey, walletInfo, bankAccountId, phoneNumber, pin } = req.body;
 
     /* ── Verify withdrawal PIN ── */
@@ -395,12 +339,13 @@ router.post('/withdraw', async (req, res) => {
     if (!pin) {
       return res.status(400).json({ error: 'PIN required', needsPin: true });
     }
-    if (!verifyPin(pin, user.withdrawal_pin, telegramUser.id)) {
+    const hashedPin = hashPin(pin, telegramUser.id);
+    if (hashedPin !== user.withdrawal_pin) {
       return res.status(403).json({ error: 'Incorrect PIN' });
     }
 
     /* ── Validate method ── */
-    const methodConfig = E.WITHDRAWAL_METHODS[methodKey];
+    const methodConfig = WITHDRAWAL_METHODS[methodKey];
     if (!methodConfig) {
       return res.status(400).json({ error: 'Invalid withdrawal method' });
     }
@@ -451,7 +396,7 @@ router.post('/withdraw', async (req, res) => {
 
     /* ── Calculate fee + net ── */
     const isPro = user.pro_until > Date.now();
-    const feePct = isPro ? E.WITHDRAWAL_FEE_PRO_PCT : E.WITHDRAWAL_FEE_PCT;
+    const feePct = isPro ? WITHDRAWAL_FEE_PRO_PCT : WITHDRAWAL_FEE_PCT;
     const feeOrl = Math.floor(amountOrl * feePct);
     const netOrl = amountOrl - feeOrl;
 
@@ -488,7 +433,7 @@ router.post('/withdraw', async (req, res) => {
         bankAccount = { account_number: accountNumber, account_bank: bankCode, bank_code: bankCode, bank_name: bankName, account_name: accountName };
       }
 
-      const netNgn = Math.floor(netOrl * E.ORL_TO_NGN);
+      const netNgn = Math.floor(netOrl * ORL_TO_NGN);
       if (netNgn < 100) {
         return res.status(400).json({ error: 'Net amount too small for bank transfer (min ₦100)' });
       }
@@ -498,7 +443,7 @@ router.post('/withdraw', async (req, res) => {
       walletInfoToStore = `${bankAccount.bank_name} • ${bankAccount.account_number} • ${bankAccount.account_name}`;
 
       // Manual approval for large withdrawals — defer Flutterwave call until admin approves
-      if (amountOrl >= E.MANUAL_APPROVAL_THRESHOLD_ORL) {
+      if (amountOrl >= MANUAL_APPROVAL_THRESHOLD_ORL) {
         needsApproval = true;
       } else {
         // Initiate real Flutterwave transfer
@@ -529,7 +474,7 @@ router.post('/withdraw', async (req, res) => {
       }
       const normalizedPhone = normalizeNgPhone(phone);
 
-      const netNgn = Math.floor(netOrl * E.ORL_TO_NGN);
+      const netNgn = Math.floor(netOrl * ORL_TO_NGN);
       if (netNgn < 50) {
         return res.status(400).json({ error: 'Net amount too small for airtime (min ₦50)' });
       }
@@ -539,7 +484,7 @@ router.post('/withdraw', async (req, res) => {
       walletInfoToStore = normalizedPhone;
 
       // Manual approval for large airtime withdrawals too
-      if (amountOrl >= E.MANUAL_APPROVAL_THRESHOLD_ORL) {
+      if (amountOrl >= MANUAL_APPROVAL_THRESHOLD_ORL) {
         needsApproval = true;
       } else {
         // Initiate real Flutterwave airtime purchase
@@ -563,7 +508,7 @@ router.post('/withdraw', async (req, res) => {
       if (!/^T[A-Za-z0-9]{33,34}$/.test(walletInfo)) {
         return res.status(400).json({ error: 'Invalid USDT TRC20 wallet address (must start with T)' });
       }
-      const netUsd = netOrl / E.ORL_PER_USD;
+      const netUsd = netOrl / ORL_PER_USD;
       netFiat = `$${netUsd.toFixed(2)} USDT`;
       walletInfoToStore = `TRC20: ${walletInfo}`;
       // USDT is always manual — admin will process via admin panel
@@ -623,10 +568,6 @@ router.post('/withdraw', async (req, res) => {
       flw_reference: flwReference,
       needs_approval: needsApproval,
     }, req.ip);
-
-    // CRITICAL WRITE — persist immediately so a crash can't lose the balance
-    // deduction / withdrawal record (which represents real money movement).
-    flushNow();
 
     /* ── Send notifications ── */
     if (needsApproval) {

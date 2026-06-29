@@ -21,6 +21,7 @@ import {
 } from '../db.js';
 import { accrueMinedORL } from '../services/mining.js';
 import { getAdChallengeProgress } from '../services/adTracking.js';
+import { isSuperAdmin } from '../middleware/adminAuth.js';
 import {
   TANK_ORL,
   RIGS,
@@ -31,10 +32,11 @@ import {
   FEATURED_TASKS,
   PRO_MULTIPLIER,
   BOOST_MULTIPLIER,
-  ECONOMY_CONFIG,
-  getTierMultiplier
+  getTierMultiplier,
+  USD_TO_NGN,
+  ORL_PER_USD,
+  ORL_TO_NGN
 } from '../economy.js';
-import { getEconomyConfig, getFeatureFlags } from '../settings.js';
 
 const router = Router();
 
@@ -49,40 +51,37 @@ export function getUserState(telegramId) {
   const user = getUser(telegramId);
   if (!user) return null;
 
-  // Use the live, admin-editable economy config (not the static defaults).
-  const E = getEconomyConfig();
-
   // Ensure user tier is updated automatically
   checkTierUpgrade(user);
 
   const now = Date.now();
 
   // Energy: percentage of tank left
-  const energy = Math.max(0, Math.min(100, ((E.TANK_ORL - user.tank_mined) / E.TANK_ORL) * 100));
+  const energy = Math.max(0, Math.min(100, ((TANK_ORL - user.tank_mined) / TANK_ORL) * 100));
 
   // Current Rig details
-  const rig = E.RIGS[user.rig_level] || E.RIGS[0];
+  const rig = RIGS[user.rig_level] || RIGS[0];
   const sessionMs = rig.sessionMin * 60 * 1000;
 
   // Multipliers
   const isPro = user.pro_until > now;
   const isBoosted = user.boost_until > now;
-  const tierMul = (E.TIER_MULTIPLIERS && E.TIER_MULTIPLIERS[user.tier]) || 1;
-  const multiplier = (isPro ? E.PRO_MULTIPLIER : 1) * (isBoosted ? E.BOOST_MULTIPLIER : 1) * tierMul;
+  const tierMul = getTierMultiplier(user.tier);
+  const multiplier = (isPro ? PRO_MULTIPLIER : 1) * (isBoosted ? BOOST_MULTIPLIER : 1) * tierMul;
 
   // Hashrate: ORL/hour
-  const hashrate = (E.TANK_ORL / (rig.sessionMin / 60)) * multiplier;
+  const hashrate = (TANK_ORL / (rig.sessionMin / 60)) * multiplier;
 
   // Fuel time left (ms)
   let fuelTimeLeft = 0;
-  if (user.last_accrue_at && user.tank_mined < E.TANK_ORL) {
+  if (user.last_accrue_at && user.tank_mined < TANK_ORL) {
     const elapsed = now - user.last_accrue_at;
     fuelTimeLeft = Math.max(0, sessionMs - elapsed);
   }
 
   // Faucet state
-  const faucetReady = !user.faucet_last || (now - user.faucet_last >= E.FAUCET_COOLDOWN);
-  const faucetCooldown = user.faucet_last ? Math.max(0, E.FAUCET_COOLDOWN - (now - user.faucet_last)) : 0;
+  const faucetReady = !user.faucet_last || (now - user.faucet_last >= FAUCET_COOLDOWN);
+  const faucetCooldown = user.faucet_last ? Math.max(0, FAUCET_COOLDOWN - (now - user.faucet_last)) : 0;
 
   // Streak status
   let streakClaimedToday = false;
@@ -108,8 +107,8 @@ export function getUserState(telegramId) {
   }
 
   // Map tasks to include the client expected 'r' property instead of 'reward'
-  const clientTasks = E.TASKS.map(t => ({ id: t.id, title: t.title, sub: t.sub, r: t.reward, url: t.url }));
-  const clientFeaturedTasks = E.FEATURED_TASKS.map(t => ({ id: t.id, title: t.title, sub: t.sub, r: t.reward, url: t.url }));
+  const clientTasks = TASKS.map(t => ({ id: t.id, title: t.title, sub: t.sub, r: t.reward, url: t.url }));
+  const clientFeaturedTasks = FEATURED_TASKS.map(t => ({ id: t.id, title: t.title, sub: t.sub, r: t.reward, url: t.url }));
 
   // Ad challenge progress
   const adChallenge = getAdChallengeProgress(user);
@@ -119,7 +118,7 @@ export function getUserState(telegramId) {
   const proChestReady = isPro && (now - proChestLast >= 24 * 60 * 60 * 1000);
 
   // Streak amounts for frontend
-  const streakAmounts = E.STREAK_AMOUNTS;
+  const streakAmounts = STREAK_AMOUNTS;
 
   return {
     id: user.id,
@@ -161,8 +160,8 @@ export function getUserState(telegramId) {
     isPro,
     isBoosted,
     rig,
-    rigs: E.RIGS,
-    nextRig: user.rig_level + 1 < E.RIGS.length ? E.RIGS[user.rig_level + 1] : null,
+    rigs: RIGS,
+    nextRig: user.rig_level + 1 < RIGS.length ? RIGS[user.rig_level + 1] : null,
     tasks: clientTasks,
     featuredTasks: clientFeaturedTasks,
     completedTasks: completedTasksObj,
@@ -173,16 +172,13 @@ export function getUserState(telegramId) {
     proChestReady,
     proChestLast,
     photoUrl: user.photo_url || null,
-    avatarUrl: user.avatar_url || null,
     tutorialSeen: user.tutorial_seen === 1,
-    role: user.role || 'user',
-    permissions: user.permissions || '',
-    // Server-authoritative economy config — the client must use these values
-    // for ALL displays (tank size, peg, prizes, referral %, rig costs, etc.)
-    // instead of its own stale hardcoded copies.
-    economy: getEconomyConfig(),
-    // Feature flags so the client can show "temporarily disabled" states.
-    flags: getFeatureFlags(),
+    role: isSuperAdmin(user.telegram_id) ? 'admin' : (user.role || 'user'),
+    permissions: isSuperAdmin(user.telegram_id) ? 'all' : (user.permissions || ''),
+    flwConfigured: !!process.env.FLW_SECRET_KEY,
+    usdToNgn: USD_TO_NGN,
+    orlPerUsd: ORL_PER_USD,
+    orlToNgn: ORL_TO_NGN,
   };
 }
 
@@ -286,10 +282,10 @@ router.get('/transactions', async (req, res) => {
     const offset = (page - 1) * limit;
 
     const transactions = getAll(
-      'SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+      "SELECT * FROM transactions WHERE user_id = ? AND type != 'mining' ORDER BY created_at DESC LIMIT ? OFFSET ?",
       [user.id, limit, offset]
     );
-    const total = getOne('SELECT COUNT(*) AS cnt FROM transactions WHERE user_id = ?', [user.id])?.cnt || 0;
+    const total = getOne("SELECT COUNT(*) AS cnt FROM transactions WHERE user_id = ? AND type != 'mining'", [user.id])?.cnt || 0;
 
     return res.json({
       transactions,

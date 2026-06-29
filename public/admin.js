@@ -86,6 +86,12 @@ async function init() {
   if (tg) {
     try { tg.ready(); } catch (e) {}
     try { tg.expand(); } catch (e) {}
+    if (tg.BackButton) {
+      tg.BackButton.show();
+      tg.BackButton.onClick(() => {
+        window.location.href = '/';
+      });
+    }
   }
 
   // Check if we have initData

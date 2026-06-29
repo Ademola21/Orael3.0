@@ -3,40 +3,26 @@
 //  - Poll Flutterwave for stuck withdrawals (every 15 min)
 //  - Daily DB backup (every 24h)
 //  - Weekly leaderboard reward distribution (Sundays at midnight)
-//
-//  CRON LEADERSHIP: When running multiple Docker replicas for HA/scale, only
-//  ONE replica should run these background tasks (otherwise you get duplicate
-//  backups, duplicate reward distributions, etc.). Set CRON_LEADER=true on
-//  exactly one replica. If CRON_LEADER is unset, crons run (single-replica
-//  default for backwards compat). If CRON_LEADER=false, crons are skipped.
 // ─────────────────────────────────────────────────────────────
 
 import { getWithdrawalsByStatus, updateWithdrawalStatusById, getUserById, updateUser, addTransaction, backupDatabase, logAudit, getAll, getOne, run } from '../db.js';
 import { getTransferStatus } from './flutterwave.js';
 import { notifyWithdrawalCompleted, notifyWithdrawalFailed } from './notifications.js';
+import { fetchExchangeRate } from '../economy.js';
 
 const FIFTEEN_MIN = 15 * 60 * 1000;
 const ONE_DAY = 24 * 60 * 60 * 1000;
 const ONE_HOUR = 60 * 60 * 1000;
 
 /**
- * Whether this replica should run cron jobs. In a multi-replica Docker setup,
- * set CRON_LEADER=true on exactly one container. Default: true (single-replica).
- */
-function isCronLeader() {
-  const v = process.env.CRON_LEADER;
-  return v === undefined || v === 'true' || v === '1';
-}
-
-/**
- * Start all background cron tasks (only if this replica is the cron leader).
+ * Start all background cron tasks.
  */
 export function startCronJobs() {
-  if (!isCronLeader()) {
-    console.log('[cron] CRON_LEADER=false — background tasks skipped on this replica.');
-    return;
-  }
-  console.log('[cron] Starting background tasks (this replica is the cron leader)...');
+  console.log('[cron] Starting background tasks...');
+
+  // Fetch exchange rate on startup and every 12 hours
+  fetchExchangeRate();
+  setInterval(fetchExchangeRate, 12 * 60 * 60 * 1000);
 
   // Poll Flutterwave for stuck pending withdrawals every 15 minutes
   setInterval(pollStuckWithdrawals, FIFTEEN_MIN);
